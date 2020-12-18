@@ -1,7 +1,7 @@
 {
   "name": "loading-cache",
   "version": "1.0.0",
-  "description": "",
+  "description": "loading-cache wrapper for node-cache, based on ben-manes/caffeine",
   "main": "./lib/index.js",
   "typings": "./lib/index",
   "scripts": {
