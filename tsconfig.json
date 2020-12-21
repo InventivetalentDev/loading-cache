@@ -18,6 +18,7 @@
     ],
     "types": [
       "node",
+      "lodash",
       "mocha",
       "chai"
     ],

@@ -6,7 +6,7 @@ import * as chaiAsPromised from 'chai-as-promised';
 chai.use(chaiAsPromised);
 should();
 
-describe("Sync Loading Cache Tests", function () {
+describe("Sync Loading CacheBase Tests", function () {
     let cache: LoadingCache<string>;
     describe("#init", function () {
         it("should create a LoadingCache", function () {
@@ -42,7 +42,7 @@ describe("Sync Loading Cache Tests", function () {
 })
 //TODO: tests for multi-get/multi-load
 
-describe("Async Loading Cache Tests", function () {
+describe("Async Loading CacheBase Tests", function () {
     let cache: AsyncLoadingCache<string>;
     describe("#init", function () {
         it("should create a AsyncLoadingCache", function () {
