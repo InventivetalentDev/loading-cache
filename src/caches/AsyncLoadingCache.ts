@@ -1,5 +1,5 @@
 import { AsyncLoader, AsyncMappingFunction, AsyncMultiLoader, MappingFunction } from "../loaders";
-import { CacheBase, Entry, Options as BaseOptions } from "./CacheBase";
+import { Options as BaseOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { IAsyncCache } from "../interfaces/IAsyncCache";
 

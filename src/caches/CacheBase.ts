@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { Time } from "../Time";
+import { Time } from "../util/Time";
 
 const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
