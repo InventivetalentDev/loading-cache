@@ -19,7 +19,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
 
     constructor(options: Options, loader: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>) {
         super({});
-        this._cache = new SimpleCache<K, Promise<V>>();
+        this._cache = new SimpleCache<K, Promise<V>>(options);
 
         this.loader = loader;
         this.multiLoader = multiLoader;
