@@ -140,7 +140,9 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         }
         if (this.loader) {
             for (let key of keys) {
-                present.set(key, this.get(key));
+                if (!present.has(key)) {
+                    present.set(key, this.get(key));
+                }
             }
         }
         return this.keyPromiseMapToPromiseContainingMap(present);

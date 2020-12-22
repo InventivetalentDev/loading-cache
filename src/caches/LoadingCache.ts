@@ -80,13 +80,13 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
     }
 
     _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V> {
-        const present = this.cache.getAllPresent(keys);
         if (mappingFunction) {
             return this.cache.getAll(keys, mappingFunction);
         }
         if (this.multiLoader) {
             return this.cache.getAll(keys, this.multiLoader);
         }
+        const present = this.cache.getAllPresent(keys);
         if (this.loader) {
             for (let key of keys) {
                 if (!present.has(key)) {
