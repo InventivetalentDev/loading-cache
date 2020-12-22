@@ -6,7 +6,8 @@ const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
     expireAfterWrite: 0,
     deleteOnExpiration: true,
-    expirationInterval: Time.minutes(5)
+    expirationInterval: Time.minutes(5),
+    recordStats: true
 };
 
 export interface Options {
@@ -190,10 +191,14 @@ export class Entry<K, V> {
 
     isExpired(options: Options) {
         if (options.expireAfterAccess !== 0) {
-            return Time.now - this.accessTime > options.expireAfterAccess;
+            if (Time.now - this.accessTime > options.expireAfterAccess) {
+                return true;
+            }
         }
         if (options.expireAfterWrite !== 0) {
-            return Time.now - this.writeTime > options.expireAfterWrite;
+            if (Time.now - this.writeTime > options.expireAfterWrite) {
+                return true;
+            }
         }
         return false;
     }
