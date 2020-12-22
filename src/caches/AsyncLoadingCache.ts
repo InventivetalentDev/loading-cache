@@ -2,6 +2,7 @@ import { AsyncLoader, AsyncMappingFunction, AsyncMultiLoader, MappingFunction } 
 import { Options as BaseOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { IAsyncCache } from "../interfaces/IAsyncCache";
+import { CacheStats } from "../CacheStats";
 
 export interface Options extends BaseOptions {
 }
@@ -23,6 +24,10 @@ export class AsyncLoadingCache<K, V> implements IAsyncCache<K, V> {
 
     get cache(): SimpleCache<K, Promise<V>> {
         return this._cache;
+    }
+
+    get stats(): CacheStats {
+        return this.cache.stats;
     }
 
     protected keyPromiseMapToPromiseContainingMap(keyToPromiseMap: Map<K, Promise<V>>): Promise<Map<K, V>> {
