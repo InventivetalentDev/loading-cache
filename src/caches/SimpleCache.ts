@@ -2,6 +2,7 @@ import { CacheBase, Entry, Options } from "./CacheBase";
 import { MappingFunction } from "../loaders";
 import { ICache } from "../interfaces/ICache";
 import { CacheStats } from "../CacheStats";
+import { asArray } from "../util";
 
 /**
  * Simple cache without automated loading functionality
@@ -23,13 +24,21 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
     }
 
     get(key: K, mappingFunction: MappingFunction<K, V>): V | undefined {
-        const entry = this.getEntryIfPresent(key);
-        if (entry) {
-            return entry.getValue();
+        return this._get(key, mappingFunction);
+    }
+
+    _get(key: K, mappingFunction: MappingFunction<K, V>, forceLoad: boolean = false): V | undefined {
+        if (!forceLoad) {
+            const entry = this.getEntryIfPresent(key);
+            if (entry) {
+                return entry.getValue();
+            }
         }
         if (mappingFunction) {
             const mapped = mappingFunction(key);
-            this.put(key, mapped);
+            if (mapped) {
+                this.put(key, mapped);
+            }
             if (this.options.recordStats) {
                 if (mapped) {
                     this.stats.inc(CacheStats.LOAD_SUCCESS)
@@ -67,14 +76,10 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
     }
 
     getAll(keys: Iterable<K>, mappingFunction: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V> {
+        const keyArray = asArray(keys);
         const present = this.getAllPresent(keys);
-        if (mappingFunction) {
-            const missingKeys = new Array<K>();
-            for (let key of keys) {
-                if (!present.has(key)) {
-                    missingKeys.push(key);
-                }
-            }
+        if (mappingFunction && present.size < keyArray.length) {
+            const missingKeys = keyArray.filter(k => !present.has(k));
             if (missingKeys.length > 0) {
                 const mapped = mappingFunction(missingKeys);
                 this.putAll(mapped);

@@ -59,10 +59,10 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
             }
         }
         if (mappingFunction) {
-            return this.cache.get(key, mappingFunction);
+            return this.cache._get(key, mappingFunction, true);
         }
         if (this.loader) {
-            return this.cache.get(key, this.loader);
+            return this.cache._get(key, this.loader, true);
         }
         return undefined;
     }

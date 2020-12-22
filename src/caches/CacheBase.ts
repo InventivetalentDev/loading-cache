@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 import { Time } from "../util/Time";
 import { CacheStats } from "../CacheStats";
 import { CacheEvents } from "../CacheEvents";
+import { asArray } from "../util";
 
 const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
@@ -63,6 +64,8 @@ export abstract class CacheBase<K, V> extends EventEmitter {
 
         // Start cleanup task if enabled
         this.runCleanup();
+
+        CacheEvents.forward(this._stats, this);
     }
 
     get options(): Options {
@@ -99,7 +102,6 @@ export abstract class CacheBase<K, V> extends EventEmitter {
             this.stats.inc(CacheStats.EXPIRE, toDelete.length);
         }
     }
-
 
     ///// GET
 
@@ -154,7 +156,7 @@ export abstract class CacheBase<K, V> extends EventEmitter {
     /////
 
     keys(): Array<K> {
-        return Array.from(this.data.keys());
+        return asArray(this.data.keys());
     }
 
     has(key: K): boolean {

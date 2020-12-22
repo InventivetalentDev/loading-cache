@@ -5,6 +5,7 @@ import { IAsyncCache } from "../interfaces/IAsyncCache";
 import { CacheStats } from "../CacheStats";
 import { CacheEvents } from "../CacheEvents";
 import { EventEmitter } from "events";
+import { asArray, keyPromiseMapToPromiseContainingMap } from "../util";
 
 export interface Options extends BaseOptions {
 }
@@ -33,23 +34,6 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
 
     get stats(): CacheStats {
         return this.cache.stats;
-    }
-
-    protected keyPromiseMapToPromiseContainingMap(keyToPromiseMap: Map<K, Promise<V>>): Promise<Map<K, V>> {
-        return new Promise<Map<K, V>>(resolve => {
-            const keys = keyToPromiseMap.keys();
-            const values = keyToPromiseMap.values();
-            Promise.all(values).then(resolvedValues => {
-                const valueMap = new Map<K, V>();
-                let i = 0;
-                // The promises *should* be in the original order of the map
-                for (let key of keys) {
-                    let promise = resolvedValues[i++];
-                    valueMap.set(key, promise);
-                }
-                resolve(valueMap);
-            })
-        })
     }
 
     ///// GET
@@ -93,7 +77,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
 
     getAllPresent(keys: Iterable<K>): Promise<Map<K, V>> {
         const present = this.cache.getAllPresent(keys);
-        return this.keyPromiseMapToPromiseContainingMap(present);
+        return keyPromiseMapToPromiseContainingMap<K, V>(present);
     }
 
 
@@ -105,14 +89,10 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
     }
 
     _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
+        const keyArray = asArray<K>(keys);
         const present = this.cache.getAllPresent(keys);
-        if (mappingFunction) {
-            const missingKeys = new Array<K>();
-            for (let key of keys) {
-                if (!present.has(key)) {
-                    missingKeys.push(key);
-                }
-            }
+        if (mappingFunction && present.size < keyArray.length) {
+            const missingKeys = keyArray.filter(k => !present.has(k));
             if (missingKeys.length > 0) {
                 const mapped: Map<K, V> | Promise<Map<K, V>> = mappingFunction(keys);
                 let mappedPromise: Promise<Map<K, V>>;
@@ -123,7 +103,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                 }
 
                 return Promise.all([
-                    this.keyPromiseMapToPromiseContainingMap(present),
+                    keyPromiseMapToPromiseContainingMap<K, V>(present),
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
                     this.putAll(newMap);
@@ -145,7 +125,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                 }
             }
         }
-        return this.keyPromiseMapToPromiseContainingMap(present);
+        return keyPromiseMapToPromiseContainingMap<K, V>(present);
     }
 
 

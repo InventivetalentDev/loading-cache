@@ -1,4 +1,7 @@
-export class CacheStats {
+import { EventEmitter } from "events";
+import { CacheEvents } from "./CacheEvents";
+
+export class CacheStats extends EventEmitter {
     static readonly HIT: string = "hit";
     static readonly MISS: string = "miss";
     static readonly LOAD_SUCCESS: string = "load_success";
@@ -10,7 +13,14 @@ export class CacheStats {
     private readonly map = new Map<string, number>();
 
     inc(key: string, amount: number = 1) {
-        this.map.set(key, this.get(key) + amount);
+        if (amount === 0) return;
+        const prev = this.get(key);
+        this.map.set(key, prev + amount);
+        try {
+            this.emit(CacheEvents.STAT, key, amount, prev);
+        } catch (e) {
+            console.error(e);
+        }
     }
 
     get(key: string): number {
