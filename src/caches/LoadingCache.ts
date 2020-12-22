@@ -89,7 +89,9 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
         }
         if (this.loader) {
             for (let key of keys) {
-                present.set(key, this.get(key, this.loader));
+                if (!present.has(key)) {
+                    present.set(key, this.get(key, this.loader));
+                }
             }
         }
         return present;
