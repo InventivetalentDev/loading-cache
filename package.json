@@ -1,15 +1,15 @@
 {
   "name": "loading-cache",
   "version": "1.0.0",
-  "description": "loading-cache wrapper for node-cache, based on ben-manes/caffeine",
-  "main": "./lib/index.js",
-  "typings": "./lib/index",
+  "description": "loading cache based on ben-manes/caffeine and node-cache",
+  "main": "dist/index.js",
+  "typings": "dist/index",
   "scripts": {
+    "clean": "rm -rf dist",
     "test": "mocha -r ts-node/register test/**.ts",
     "compile": "tsc",
     "build": "npm run clean && npm run compile",
-    "clean": "rm -rf lib",
-    "doc": "typedoc --out ./doc ./src"
+    "doc": "typedoc --out doc src"
   },
   "author": "Haylee Schäfer",
   "license": "MIT",
