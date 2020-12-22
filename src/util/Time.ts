@@ -5,15 +5,15 @@ export class Time {
     }
 
     static seconds(s: number) {
-        return this.millis(s / 1000);
+        return this.millis(s * 1000);
     }
 
     static minutes(m: number) {
-        return this.seconds(m / 60);
+        return this.seconds(m * 60);
     }
 
     static hours(h: number) {
-        return this.minutes(h / 60);
+        return this.minutes(h * 60);
     }
 
     static get now(): number {
