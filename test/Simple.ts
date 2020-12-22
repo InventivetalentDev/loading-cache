@@ -80,5 +80,8 @@ describe("SimpleCache<string, string>", function () {
         it("should count expirations", function () {
             cache.stats.get(CacheStats.EXPIRE).should.equal(6);
         });
+        it("should count loads", function () {
+            cache.stats.get(CacheStats.LOAD_SUCCESS).should.equal(2);
+        });
     });
 });
