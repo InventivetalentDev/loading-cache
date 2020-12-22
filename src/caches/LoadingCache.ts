@@ -3,12 +3,14 @@ import { Options as BaseOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { ICache } from "../interfaces/ICache";
 import { CacheStats } from "../CacheStats";
+import { EventEmitter } from "events";
+import { CacheEvents } from "../CacheEvents";
 
 export interface Options extends BaseOptions {
 }
 
 
-export class LoadingCache<K, V> implements ICache<K, V> {
+export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
 
     private readonly _cache: SimpleCache<K, V>;
 
@@ -16,10 +18,13 @@ export class LoadingCache<K, V> implements ICache<K, V> {
     readonly multiLoader: MultiLoader<K, V>;
 
     constructor(options: Options, loader: Loader<K, V>, multiLoader?: MultiLoader<K, V>) {
+        super({});
         this._cache = new SimpleCache<K, V>();
 
         this.loader = loader;
         this.multiLoader = multiLoader;
+
+        CacheEvents.forward(this._cache, this);
     }
 
     get cache(): SimpleCache<K, V> {

@@ -3,12 +3,14 @@ import { Options as BaseOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { IAsyncCache } from "../interfaces/IAsyncCache";
 import { CacheStats } from "../CacheStats";
+import { CacheEvents } from "../CacheEvents";
+import { EventEmitter } from "events";
 
 export interface Options extends BaseOptions {
 }
 
 
-export class AsyncLoadingCache<K, V> implements IAsyncCache<K, V> {
+export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache<K, V> {
 
     private readonly _cache: SimpleCache<K, Promise<V>>;
 
@@ -16,10 +18,13 @@ export class AsyncLoadingCache<K, V> implements IAsyncCache<K, V> {
     readonly multiLoader: AsyncMultiLoader<K, V>;
 
     constructor(options: Options, loader: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>) {
+        super({});
         this._cache = new SimpleCache<K, Promise<V>>();
 
         this.loader = loader;
         this.multiLoader = multiLoader;
+
+        CacheEvents.forward(this._cache, this);
     }
 
     get cache(): SimpleCache<K, Promise<V>> {

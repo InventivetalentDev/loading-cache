@@ -1,9 +1,11 @@
 export class CacheStats {
-    static readonly HIT = "hit";
-    static readonly MISS = "miss";
-    static readonly LOAD_SUCCESS = "load_success";
-    static readonly LOAD_FAIL = "load_failure";
-    static readonly EXPIRE = "expire";
+    static readonly HIT: string = "hit";
+    static readonly MISS: string = "miss";
+    static readonly LOAD_SUCCESS: string = "load_success";
+    static readonly LOAD_FAIL: string = "load_failure";
+    static readonly EXPIRE: string = "expire";
+
+    static readonly ALL: string[] = [CacheStats.HIT, CacheStats.MISS, CacheStats.LOAD_SUCCESS, CacheStats.LOAD_FAIL, CacheStats.EXPIRE];
 
     private readonly map = new Map<string, number>();
 

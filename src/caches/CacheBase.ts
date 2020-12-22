@@ -1,6 +1,7 @@
 import { EventEmitter } from "events";
 import { Time } from "../util/Time";
 import { CacheStats } from "../CacheStats";
+import { CacheEvents } from "../CacheEvents";
 
 const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
@@ -87,7 +88,7 @@ export abstract class CacheBase<K, V> extends EventEmitter {
             if (entry.isExpired(this.options)) {
                 toDelete.push(entry.getKey());
                 try {
-                    this.emit("expire", entry.getKey(), entry.getValue());
+                    this.emit(CacheEvents.EXPIRE, entry.getKey(), entry.getValue());
                 } catch (e) {
                     console.error(e);
                 }
