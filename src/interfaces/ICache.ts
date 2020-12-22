@@ -1,6 +1,9 @@
 import { MappingFunction } from "../loaders";
+import { CacheStats } from "../CacheStats";
 
 export interface ICache<K, V> {
+
+    readonly stats: CacheStats;
 
     /**
      * Get a value mapped by the key, or <code>undefined</code> if not present

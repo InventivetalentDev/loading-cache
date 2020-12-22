@@ -2,6 +2,7 @@ import { Loader, MappingFunction, MultiLoader } from "../loaders";
 import { Options as BaseOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { ICache } from "../interfaces/ICache";
+import { CacheStats } from "../CacheStats";
 
 export interface Options extends BaseOptions {
 }
@@ -23,6 +24,14 @@ export class LoadingCache<K, V> implements ICache<K, V> {
 
     get cache(): SimpleCache<K, V> {
         return this._cache;
+    }
+
+    get options(): Options {
+        return this.cache.options;
+    }
+
+    get stats(): CacheStats {
+        return this.cache.stats;
     }
 
     ///// GET

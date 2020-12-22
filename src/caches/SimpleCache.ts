@@ -1,6 +1,7 @@
 import { CacheBase, Entry, Options } from "./CacheBase";
 import { MappingFunction } from "../loaders";
 import { ICache } from "../interfaces/ICache";
+import { CacheStats } from "../CacheStats";
 
 /**
  * Simple cache without automated loading functionality
@@ -29,6 +30,13 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
         if (mappingFunction) {
             const mapped = mappingFunction(key);
             this.put(key, mapped);
+            if (this.options.recordStats) {
+                if (mapped) {
+                    this.stats.inc(CacheStats.LOAD_SUCCESS)
+                } else {
+                    this.stats.inc(CacheStats.LOAD_FAIL);
+                }
+            }
             return mapped;
         }
         return undefined;
@@ -74,6 +82,10 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
                 const combined = new Map<K, V>();
                 present.forEach((v, k) => combined.set(k, v));
                 mapped.forEach((v, k) => combined.set(k, v));
+                if (this.options.recordStats) {
+                    this.stats.inc(CacheStats.LOAD_SUCCESS, mapped.size);
+                    this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - mapped.size);
+                }
                 return combined;
             }
         }

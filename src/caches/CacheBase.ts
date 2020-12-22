@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { Time } from "../util/Time";
+import { CacheStats } from "../CacheStats";
 
 const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
@@ -33,9 +34,15 @@ export interface Options {
      * Interval in ms to run an expiration timer<br/>
      * Set to <code>0</code> to not run a timer & only expire when querying entries<br/>
      * Defaults to <code>3000</code> (Time.minutes(5))
-     * @default
+     * @default 3000
      */
     expirationInterval?: number;
+
+    /**
+     * Whether to record stats
+     * @default true
+     */
+    recordStats?: boolean;
 }
 
 /**
@@ -44,6 +51,7 @@ export interface Options {
 export abstract class CacheBase<K, V> extends EventEmitter {
 
     private readonly data: Map<K, Entry<K, V>> = new Map<K, Entry<K, V>>();
+    private readonly _stats: CacheStats = new CacheStats();
     private readonly _options: Options;
     private _cleanupTimeout: NodeJS.Timeout;
 
@@ -57,6 +65,10 @@ export abstract class CacheBase<K, V> extends EventEmitter {
 
     get options(): Options {
         return this._options;
+    }
+
+    get stats(): CacheStats {
+        return this._stats;
     }
 
     protected runCleanup(): void {
@@ -81,6 +93,9 @@ export abstract class CacheBase<K, V> extends EventEmitter {
             }
         });
         toDelete.forEach(k => this.data.delete(k));
+        if (this.options.recordStats) {
+            this.stats.inc(CacheStats.EXPIRE, toDelete.length);
+        }
     }
 
 
@@ -99,13 +114,25 @@ export abstract class CacheBase<K, V> extends EventEmitter {
     protected getEntryIfPresent(key: K): Entry<K, V> | undefined {
         const entry = this.getEntryDirect(key);
         if (!entry) {
+            if (this.options.recordStats) {
+                this.stats.inc(CacheStats.MISS);
+            }
             return undefined;
         }
         if (entry.isExpired(this.options)) {
             if (this.options.deleteOnExpiration) {
                 this.invalidateEntry(key);
+                if (this.options.recordStats) {
+                    this.stats.inc(CacheStats.EXPIRE);
+                }
+            }
+            if (this.options.recordStats) {
+                this.stats.inc(CacheStats.MISS);
             }
             return undefined;
+        }
+        if (this.options.recordStats) {
+            this.stats.inc(CacheStats.HIT);
         }
         return entry;
     }
