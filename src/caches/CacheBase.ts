@@ -151,8 +151,8 @@ export abstract class CacheBase<K, V> extends EventEmitter {
 
     /////
 
-    keys(): IterableIterator<K> {
-        return this.data.keys();
+    keys(): Array<K> {
+        return Array.from(this.data.keys());
     }
 
     has(key: K): boolean {

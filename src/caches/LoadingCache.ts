@@ -118,7 +118,7 @@ export class LoadingCache<K, V> implements ICache<K, V> {
 
     /////
 
-    keys(): IterableIterator<K> {
+    keys(): Array<K> {
         return this.cache.keys();
     }
 

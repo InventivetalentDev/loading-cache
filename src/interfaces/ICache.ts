@@ -65,7 +65,7 @@ export interface ICache<K, V> {
      */
     invalidateAll(): void;
 
-    keys(): IterableIterator<K>;
+    keys(): Array<K>;
 
     has(key: K): boolean;
 

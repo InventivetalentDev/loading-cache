@@ -178,7 +178,7 @@ export class AsyncLoadingCache<K, V> implements IAsyncCache<K, V> {
 
     /////
 
-    keys(): IterableIterator<K> {
+    keys(): Array<K> {
         return this.cache.keys();
     }
 
