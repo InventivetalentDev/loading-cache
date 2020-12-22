@@ -81,7 +81,7 @@ export abstract class CacheBase<K, V> extends EventEmitter {
         }
     }
 
-    protected deleteExpiredEntries(): void {
+    protected deleteExpiredEntries(recordStats: boolean = this.options.recordStats): void {
         const toDelete: K[] = [];
         this.data.forEach(entry => {
             if (entry.isExpired(this.options)) {
@@ -94,7 +94,7 @@ export abstract class CacheBase<K, V> extends EventEmitter {
             }
         });
         toDelete.forEach(k => this.data.delete(k));
-        if (this.options.recordStats) {
+        if (recordStats) {
             this.stats.inc(CacheStats.EXPIRE, toDelete.length);
         }
     }
@@ -112,10 +112,10 @@ export abstract class CacheBase<K, V> extends EventEmitter {
     /**
      * Get the entry after checking for expiration, or <code>undefined</code> if it doesn't exist or is expired
      */
-    protected getEntryIfPresent(key: K): Entry<K, V> | undefined {
+    protected getEntryIfPresent(key: K, recordStats: boolean = this.options.recordStats): Entry<K, V> | undefined {
         const entry = this.getEntryDirect(key);
         if (!entry) {
-            if (this.options.recordStats) {
+            if (recordStats) {
                 this.stats.inc(CacheStats.MISS);
             }
             return undefined;
@@ -123,16 +123,16 @@ export abstract class CacheBase<K, V> extends EventEmitter {
         if (entry.isExpired(this.options)) {
             if (this.options.deleteOnExpiration) {
                 this.invalidateEntry(key);
-                if (this.options.recordStats) {
+                if (recordStats) {
                     this.stats.inc(CacheStats.EXPIRE);
                 }
             }
-            if (this.options.recordStats) {
+            if (recordStats) {
                 this.stats.inc(CacheStats.MISS);
             }
             return undefined;
         }
-        if (this.options.recordStats) {
+        if (recordStats) {
             this.stats.inc(CacheStats.HIT);
         }
         return entry;

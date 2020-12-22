@@ -95,7 +95,7 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
     ///// PUT
 
     put(key: K, value: V): void {
-        let entry = this.getEntryIfPresent(key);
+        let entry = this.getEntryIfPresent(key, false);
         if (!entry) {
             // create new entry
             entry = new Entry<K, V>(key)

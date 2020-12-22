@@ -40,10 +40,14 @@ describe("SimpleCache<string, string>", function () {
             map.size.should.equal(2);
             map.get("b").should.equal("5134676");
             map.get("y").should.equal("167867");
+
+            console.log("get simple "+ cache.stats.get(CacheStats.MISS))
         });
         it("should get new values using mapping function", function () {
             cache.get("d", k => k + "218979").should.equal("d218979");
             cache.get("e", k => k + "168797").should.equal("e168797");
+
+            console.log("get load "+ cache.stats.get(CacheStats.MISS))
         });
     });
     describe("#keys", function () {
@@ -68,6 +72,17 @@ describe("SimpleCache<string, string>", function () {
                 cache.keys().length.should.equal(0);
                 done();
             }, 1500);
+        });
+    });
+    describe("#stats", function () {
+        it("should count hits", function () {
+            cache.stats.get(CacheStats.HIT).should.equal(4); // excluding the loads
+        });
+        it("should count misses", function () {
+            cache.stats.get(CacheStats.MISS).should.equal(2);
+        });
+        it("should count expirations", function () {
+            cache.stats.get(CacheStats.EXPIRE).should.equal(6);
         });
     });
 });
