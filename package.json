@@ -2,8 +2,37 @@
   "name": "loading-cache",
   "version": "1.0.0",
   "description": "loading cache based on ben-manes/caffeine and node-cache",
+  "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index",
+  "author": {
+    "name": "Haylee Schäfer",
+    "email": "mail@inventivetalent.org",
+    "url": "https://inventivetalent.dev"
+  },
+  "homepage": "https://github.com/InventivetalentDev/loading-cache#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/InventivetalentDev/loading-cache"
+  },
+  "bugs": "https://github.com/InventivetalentDev/loading-cache/issues",
+  "funding": [
+    {
+      "type": "sponsors",
+      "url": "https://github.com/sponsors/InventivetalentDev"
+    },
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/inventivetalent"
+    }
+  ],
+  "keywords": [
+    "cache",
+    "loading-cache",
+    "caching",
+    "async cache",
+    "async"
+  ],
   "scripts": {
     "clean": "rm -rf dist",
     "test": "mocha -r ts-node/register test/**.ts",
@@ -11,8 +40,6 @@
     "build": "npm run clean && npm run compile",
     "doc": "typedoc --out doc src"
   },
-  "author": "Haylee Schäfer",
-  "license": "MIT",
   "dependencies": {
     "lodash": "^4.17.20",
     "node-cache": "^5.1.2",
