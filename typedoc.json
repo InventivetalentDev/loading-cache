@@ -1,6 +1,6 @@
 {
   "inputFiles": ["src"],
-  "out": "doc",
+  "out": "docs",
   "excludePrivate": true,
   "excludeProtected": true,
   "stripInternal": true
