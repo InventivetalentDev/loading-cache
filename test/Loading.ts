@@ -11,6 +11,7 @@ should();
 describe("LoadingCache<string, string>", function () {
     let cache: LoadingCache<string, string>;
     describe("#init", function () {
+        this.timeout(5);
         it("should create a new cache with options", function () {
             cache = new LoadingCache<string, string>({
                 expireAfterWrite: Time.seconds(1),
@@ -31,6 +32,7 @@ describe("LoadingCache<string, string>", function () {
         });
     });
     describe("#put", function () {
+        this.timeout(2);
         it("should put new entries", function () {
             cache.put("a", "12345");
             cache.put("b", "5134676");
@@ -39,11 +41,13 @@ describe("LoadingCache<string, string>", function () {
         });
     });
     describe("#get", function () {
+        this.timeout(5);
         it("should get existing entries", function () {
             cache.getIfPresent("a").should.equal("12345"); // HIT
             cache.getIfPresent("x").should.equal("61689646"); // HIT
 
             let map = cache.getAllPresent(["b", "y"]); // 2xHIT
+            map.should.be.a("Map");
             map.size.should.equal(2);
             map.get("b").should.equal("5134676");
             map.get("y").should.equal("14946");
@@ -54,13 +58,15 @@ describe("LoadingCache<string, string>", function () {
         });
     });
     describe("#load", function () {
+        this.timeout(5);
         it("should load new values from loader", function () {
             cache.get("h").should.equal("hl548994616"); // MISS
             cache.get("i").should.equal("il548994616"); // MISS
         });
     });
     describe("#keys", function () {
-        it("should contain 6 keys", function () {
+        this.timeout(2);
+        it("should contain 8 keys", function () {
             cache.keys().should.eql(["a", "b", "x", "y", "d", "e", "h", "i"]);
         });
     });

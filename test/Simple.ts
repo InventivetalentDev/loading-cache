@@ -45,6 +45,7 @@ describe("SimpleCache<string, string>", function () {
             cache.getIfPresent("x").should.equal("1346"); // HIT
 
             let map = cache.getAllPresent(["b", "y"]); // 2xHIT
+            map.should.be.a("Map");
             map.size.should.equal(2);
             map.get("b").should.equal("5134676");
             map.get("y").should.equal("167867");

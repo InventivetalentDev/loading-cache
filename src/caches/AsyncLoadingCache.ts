@@ -28,6 +28,10 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         CacheEvents.forward(this._cache, this);
     }
 
+    get options(): Options {
+        return this.cache.options;
+    }
+
     get cache(): SimpleCache<K, Promise<V>> {
         return this._cache;
     }
@@ -65,10 +69,17 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                 mappedPromise = Promise.resolve(mapped);
             }
             this.put(key, mappedPromise);
+            if (this.options.recordStats) {
+                if (mapped) {
+                    this.stats.inc(CacheStats.LOAD_SUCCESS)
+                } else {
+                    this.stats.inc(CacheStats.LOAD_FAIL);
+                }
+            }
             return mappedPromise;
         }
         if (this.loader) {
-            return this._get(key, this.loader);
+            return this._get(key, this.loader, true);
         }
         return undefined;
     }
@@ -111,6 +122,10 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     const combined = new Map<K, V>();
                     presentMap.forEach((v, k) => combined.set(k, v));
                     newMap.forEach((v, k) => combined.set(k, v));
+                    if (this.options.recordStats) {
+                        this.stats.inc(CacheStats.LOAD_SUCCESS, newMap.size);
+                        this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - newMap.size);
+                    }
                     return combined;
                 })
             }

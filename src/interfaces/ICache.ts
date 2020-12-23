@@ -1,8 +1,10 @@
 import { MappingFunction } from "../loaders";
 import { CacheStats } from "../CacheStats";
+import { Options } from "../caches/CacheBase";
 
 export interface ICache<K, V> {
 
+    readonly options: Options;
     readonly stats: CacheStats;
 
     /**
