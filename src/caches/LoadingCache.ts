@@ -9,7 +9,6 @@ import { CacheEvents } from "../CacheEvents";
 export interface Options extends BaseOptions {
 }
 
-
 export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
 
     private readonly _cache: SimpleCache<K, V>;
@@ -51,6 +50,9 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
         return this._get(key, mappingFunction, forceLoad);
     }
 
+    /**
+     * @internal
+     */
     _get(key: K, mappingFunction?: MappingFunction<K, V>, forceLoad: boolean = false): V | undefined {
         if (!forceLoad) {
             const present = this.getIfPresent(key);
@@ -79,6 +81,9 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
         return this._getAll(keys, mappingFunction);
     }
 
+    /**
+     * @internal
+     */
     _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V> {
         if (mappingFunction) {
             return this.cache.getAll(keys, mappingFunction);

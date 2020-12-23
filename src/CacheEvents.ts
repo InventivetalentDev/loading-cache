@@ -1,5 +1,8 @@
 import { EventEmitter } from "events";
 
+/**
+ * Static definitions of all cache events
+ */
 export class CacheEvents {
     /**
      * (key, value)

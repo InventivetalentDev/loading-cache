@@ -1,6 +1,9 @@
 import { EventEmitter } from "events";
 import { CacheEvents } from "./CacheEvents";
 
+/**
+ * Static definitions of all cache stats
+ */
 export class CacheStats extends EventEmitter {
     static readonly HIT: string = "hit";
     static readonly MISS: string = "miss";

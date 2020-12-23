@@ -53,6 +53,9 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         return this._get(key, mappingFunction, forceLoad);
     }
 
+    /**
+     * @internal
+     */
     _get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V> {
         if (!forceLoad) {
             const present = this.getIfPresent(key);
@@ -98,6 +101,9 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         return this._getAll(keys, mappingFunction);
     }
 
+    /**
+     * @internal
+     */
     _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
         const keyArray = asArray<K>(keys);
         const present = this.cache.getAllPresent(keys);

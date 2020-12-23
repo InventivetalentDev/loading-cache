@@ -1,0 +1,7 @@
+{
+  "inputFiles": ["src"],
+  "out": "doc",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "stripInternal": true
+}

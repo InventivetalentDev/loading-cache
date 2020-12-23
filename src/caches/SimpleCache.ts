@@ -27,6 +27,9 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
         return this._get(key, mappingFunction);
     }
 
+    /**
+     * @internal
+     */
     _get(key: K, mappingFunction: MappingFunction<K, V>, forceLoad: boolean = false): V | undefined {
         if (!forceLoad) {
             const entry = this.getEntryIfPresent(key);
