@@ -91,7 +91,6 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         return keyPromiseMapToPromiseContainingMap<K, V>(present);
     }
 
-
     getAll(keys: Iterable<K>): Promise<Map<K, V>>;
     getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
     getAll(keys: Iterable<K>, mappingFunction?: AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
@@ -142,7 +141,6 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         }
         return keyPromiseMapToPromiseContainingMap<K, V>(present);
     }
-
 
     ///// PUT
 

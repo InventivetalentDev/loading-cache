@@ -1,13 +1,7 @@
 import { MappingFunction } from "../loaders";
-import { CacheStats } from "../CacheStats";
-import { Options } from "../caches/CacheBase";
-import { IEndable } from "./IEndable";
+import { ICacheBase } from "./ICacheBase";
 
-export interface ICache<K, V> extends IEndable {
-
-    readonly options: Options;
-    readonly stats: CacheStats;
-
+export interface ICache<K, V> extends ICacheBase<K, V> {
     /**
      * Get a value mapped by the key, or <code>undefined</code> if not present
      * @param key key to get
@@ -52,24 +46,7 @@ export interface ICache<K, V> extends IEndable {
     putAll(map: Map<K, V>): void;
 
     /**
-     * Remove any cached value for the key
-     * @param key key to remove
+     * Force-refresh a key's value
      */
-    invalidate(key: K): void;
-
-    /**
-     * Remove any cached values for the keys
-     * @param keys keys to remove
-     */
-    invalidateAll(keys: Iterable<K>): void;
-
-    /**
-     * Remove all entries from the cache
-     */
-    invalidateAll(): void;
-
-    keys(): Array<K>;
-
-    has(key: K): boolean;
-
+    refresh(key: K): V;
 }

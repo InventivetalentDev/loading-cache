@@ -132,4 +132,9 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
         }
     }
 
+    refresh(key: K): V {
+        // Don't really have a way to properly refresh in SimpleCache
+        return this.getIfPresent(key);
+    }
+
 }
