@@ -1,29 +1,60 @@
 {
   "name": "loading-cache",
-  "version": "1.0.0",
-  "description": "loading-cache wrapper for node-cache, based on ben-manes/caffeine",
-  "main": "./lib/index.js",
-  "typings": "./lib/index",
+  "version": "0.1.0",
+  "description": "loading cache based on ben-manes/caffeine and node-cache",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index",
+  "author": {
+    "name": "Haylee Schäfer",
+    "email": "mail@inventivetalent.org",
+    "url": "https://inventivetalent.dev"
+  },
+  "homepage": "https://github.com/InventivetalentDev/loading-cache#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/InventivetalentDev/loading-cache"
+  },
+  "bugs": "https://github.com/InventivetalentDev/loading-cache/issues",
+  "funding": [
+    {
+      "type": "sponsors",
+      "url": "https://github.com/sponsors/InventivetalentDev"
+    },
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/inventivetalent"
+    }
+  ],
+  "keywords": [
+    "cache",
+    "loading-cache",
+    "caching",
+    "async cache",
+    "async"
+  ],
   "scripts": {
-    "test": "mocha -r ts-node/register tests/**.ts",
+    "clean": "rm -rf dist",
+    "test": "mocha -r ts-node/register test/**.ts",
     "compile": "tsc",
     "build": "npm run clean && npm run compile",
-    "clean": "rm -rf lib"
+    "doc": "typedoc --out doc src"
   },
-  "author": "Haylee Schäfer",
-  "license": "MIT",
   "dependencies": {
-    "@types/node": "^14.14.14",
+    "lodash": "^4.17.20",
     "node-cache": "^5.1.2",
     "ts-node": "^9.1.1",
     "typescript": "^4.1.3"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.165",
+    "@types/node": "^14.14.14",
     "@types/chai": "^4.2.14",
     "@types/chai-as-promised": "^7.1.3",
     "@types/mocha": "^8.2.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^8.2.1"
+    "mocha": "^8.2.1",
+    "typedoc": "^0.19.2"
   }
 }

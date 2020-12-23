@@ -1,99 +1,191 @@
-import { BaseCache } from "../base";
-import { AsyncLoader, AsyncMultiLoader } from "../loaders";
-import { Key, Options, ValueSetItem } from "node-cache";
+import { AsyncLoader, AsyncMappingFunction, AsyncMultiLoader, MappingFunction } from "../loaders";
+import { Options as BaseOptions } from "./CacheBase";
+import { SimpleCache } from "./SimpleCache";
+import { IAsyncCache } from "../interfaces/IAsyncCache";
+import { CacheStats } from "../CacheStats";
+import { CacheEvents } from "../CacheEvents";
+import { EventEmitter } from "events";
+import { asArray, keyPromiseMapToPromiseContainingMap } from "../util";
 
-export class AsyncLoadingCache<T> extends BaseCache<Promise<T>> {
+export interface Options extends BaseOptions {
+}
 
-    readonly loader: AsyncLoader<T>;
-    readonly multiLoader: AsyncMultiLoader<T>;
 
-    constructor(options: Options, loader: AsyncLoader<T>, multiLoader: AsyncMultiLoader<T> = null) {
-        super(options);
+export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache<K, V> {
+
+    private readonly _cache: SimpleCache<K, Promise<V>>;
+
+    readonly loader: AsyncLoader<K, V>;
+    readonly multiLoader: AsyncMultiLoader<K, V>;
+
+    constructor(options: Options, loader: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>) {
+        super({});
+        this._cache = new SimpleCache<K, Promise<V>>(options);
+
         this.loader = loader;
         this.multiLoader = multiLoader;
+
+        CacheEvents.forward(this._cache, this);
     }
 
-    getAsync(key: Key): Promise<T | undefined> {
-        let cached = this.getIfPresent(key);
-        if (typeof cached !== "undefined") {
-            return cached;
-        }
-        if (this.loader !== undefined) {
-            let loading = this.loader(key);
-            super.set(key, loading);
-            return loading;
-        }
-        return cached;
+    get options(): Options {
+        return this.cache.options;
     }
 
-    get(key: Key): Promise<T | undefined> {
-        return this.getAsync(key);
+    get cache(): SimpleCache<K, Promise<V>> {
+        return this._cache;
     }
 
-    getIfPresent(key: Key): Promise<T | undefined> | undefined {
-        return super.get(key);
+    get stats(): CacheStats {
+        return this.cache.stats;
     }
 
-    mgetAsyncLoading(keys: Key[]): { [p: string]: Promise<T> } {
-        let cached = this.mgetIfPresent(keys);
-        let missingKeys = keys.filter(k => !cached.hasOwnProperty(k));
-        if (missingKeys.length <= 0) {
-            return cached;
-        }
-        if (this.multiLoader !== undefined) {
-            let loading: Promise<{ [p: string]: T }> = this.multiLoader(keys);
-            let loadingPerKey: { [p: string]: Promise<T> } = {};
-            for (let key of keys) {
-                loadingPerKey[key] = loading.then(v => v[key]);
+    ///// GET
+
+    getIfPresent(key: K): Promise<V | undefined> | undefined {
+        return this.cache.getIfPresent(key);
+    }
+
+    get(key: K): Promise<V>;
+    get(key: K, mappingFunction?: MappingFunction<K, V>): Promise<V>;
+    get(key: K, mappingFunction?: AsyncMappingFunction<K, V>): Promise<V>;
+    get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V> {
+        return this._get(key, mappingFunction, forceLoad);
+    }
+
+    _get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V> {
+        if (!forceLoad) {
+            const present = this.getIfPresent(key);
+            if (present) {
+                return present;
             }
-            let set: ValueSetItem[] = [];
-            for (let key of keys) {
-                set.push({
-                    key: key,
-                    val: loadingPerKey[key]
-                });
-            }
-            super.mset(set);
-            return loadingPerKey;
-        } else if (this.loader !== undefined) {
-            let allLoading: { [key: string]: Promise<T> } = {};
-            keys.forEach(k => {
-                let loading = this.loader(k);
-                super.set(k, loading);
-                allLoading[k] = loading;
-            });
-            return allLoading;
         }
-        return cached;
-    }
-
-    mgetAsync(keys: Key[]): Promise<{ [p: string]: T }> {
-        let loading: { [p: string]: Promise<T> } = this.mgetAsyncLoading(keys);
-        return Promise.all(Object.values(loading))
-            .then(loaded => {
-                let loadingKeys: string[] = Object.keys(loading);
-                let loadedMap: { [p: string]: T } = {};
-                for (let i = 0; i < loadingKeys.length; i++) {
-                    loadedMap[loadingKeys[i]] = loaded[i];
+        if (mappingFunction) {
+            const mapped: V | Promise<V> = mappingFunction(key);
+            let mappedPromise: Promise<V>;
+            if (mapped instanceof Promise) {
+                mappedPromise = mapped as Promise<V>;
+            } else {
+                mappedPromise = Promise.resolve(mapped);
+            }
+            this.put(key, mappedPromise);
+            if (this.options.recordStats) {
+                if (mapped) {
+                    this.stats.inc(CacheStats.LOAD_SUCCESS)
+                } else {
+                    this.stats.inc(CacheStats.LOAD_FAIL);
                 }
-                return loadedMap;
-            });
+            }
+            return mappedPromise;
+        }
+        if (this.loader) {
+            return this._get(key, this.loader, true);
+        }
+        return undefined;
     }
 
-    mget(keys: Key[]): { [p: string]: Promise<T> } {
-        return super.mget(keys);
+    /// GET ALL
+
+    getAllPresent(keys: Iterable<K>): Promise<Map<K, V>> {
+        const present = this.cache.getAllPresent(keys);
+        return keyPromiseMapToPromiseContainingMap<K, V>(present);
     }
 
-    mgetIfPresent(keys: Key[]): { [p: string]: Promise<T> } {
-        return super.mget(keys);
+
+    getAll(keys: Iterable<K>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction?: AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
+        return this._getAll(keys, mappingFunction);
     }
 
-    set(key: Key, value: Promise<T>, ttl: number | string = null): boolean {
-        return super.set(key, value, ttl);
+    _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
+        const keyArray = asArray<K>(keys);
+        const present = this.cache.getAllPresent(keys);
+        if (mappingFunction && present.size < keyArray.length) {
+            const missingKeys = keyArray.filter(k => !present.has(k));
+            if (missingKeys.length > 0) {
+                const mapped: Map<K, V> | Promise<Map<K, V>> = mappingFunction(keys);
+                let mappedPromise: Promise<Map<K, V>>;
+                if (mapped instanceof Promise) {
+                    mappedPromise = mapped as Promise<Map<K, V>>;
+                } else {
+                    mappedPromise = Promise.resolve(mapped);
+                }
+
+                return Promise.all([
+                    keyPromiseMapToPromiseContainingMap<K, V>(present),
+                    mappedPromise
+                ]).then(([presentMap, newMap]) => {
+                    this.putAll(newMap);
+
+                    const combined = new Map<K, V>();
+                    presentMap.forEach((v, k) => combined.set(k, v));
+                    newMap.forEach((v, k) => combined.set(k, v));
+                    if (this.options.recordStats) {
+                        this.stats.inc(CacheStats.LOAD_SUCCESS, newMap.size);
+                        this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - newMap.size);
+                    }
+                    return combined;
+                })
+            }
+        }
+        if (this.multiLoader) {
+            return this.getAll(keys, this.multiLoader);
+        }
+        if (this.loader) {
+            for (let key of keys) {
+                if (!present.has(key)) {
+                    present.set(key, this.get(key));
+                }
+            }
+        }
+        return keyPromiseMapToPromiseContainingMap<K, V>(present);
     }
 
-    setResolved(key: Key, value: T, ttl: number | string = null): boolean {
-        return super.set(key, Promise.resolve(value), ttl);
+
+    ///// PUT
+
+    put(key: K, value: V): void;
+    put(key: K, value: Promise<V>): void;
+    put(key: K, value: V | Promise<V>): void {
+        if (value instanceof Promise) {
+            this.cache.put(key, value as Promise<V>);
+        } else {
+            this.cache.put(key, Promise.resolve(value));
+        }
+    }
+
+    putAll(map: Map<K, V>): void {
+        map.forEach((v, k) => {
+            this.cache.put(k, Promise.resolve(v));
+        })
+    }
+
+    ///// INVALIDATE
+
+    invalidate(key: K): void {
+        this.cache.invalidate(key);
+    }
+
+    invalidateAll(): void;
+    invalidateAll(keys: Iterable<K>): void;
+    invalidateAll(keys?: Iterable<K>): void {
+        this.cache.invalidateAll(keys);
+    }
+
+    refresh(key: K): Promise<V> {
+        return this._get(key, null, true);
+    }
+
+    /////
+
+    keys(): Array<K> {
+        return this.cache.keys();
+    }
+
+    has(key: K): boolean {
+        return this.cache.has(key);
     }
 
 }
