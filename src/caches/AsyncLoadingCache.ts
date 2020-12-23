@@ -188,5 +188,9 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         return this.cache.has(key);
     }
 
+    end() {
+        this.cache.end();
+    }
+
 }
 

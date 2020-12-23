@@ -89,4 +89,10 @@ export interface IAsyncCache<K, V> {
      * Remove all entries from the cache
      */
     invalidateAll(): void;
+
+    keys(): Array<K>;
+
+    has(key: K): boolean;
+
+    end(): void;
 }

@@ -93,4 +93,10 @@ describe("SimpleCache<string, string>", function () {
             cache.stats.get(CacheStats.LOAD_SUCCESS).should.equal(2);
         });
     });
+
+    describe("#end", function () {
+        it("should end", function () {
+            cache.end();
+        });
+    });
 });

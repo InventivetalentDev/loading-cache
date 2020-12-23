@@ -153,4 +153,10 @@ describe("AsyncLoadingCache<string, string>", function () {
             cache.stats.get(CacheStats.LOAD_SUCCESS).should.equal(6);
         });
     });
+
+    describe("#end", function () {
+        it("should end", function () {
+            cache.end();
+        });
+    });
 });

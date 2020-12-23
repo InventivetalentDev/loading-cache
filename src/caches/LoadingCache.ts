@@ -133,5 +133,9 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
         return this.cache.has(key);
     }
 
+    end() {
+        this.cache.end();
+    }
+
 }
 

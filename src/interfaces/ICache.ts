@@ -71,4 +71,6 @@ export interface ICache<K, V> {
 
     has(key: K): boolean;
 
+    end(): void;
+
 }

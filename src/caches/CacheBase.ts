@@ -85,6 +85,10 @@ export abstract class CacheBase<K, V> extends EventEmitter {
         }
     }
 
+    protected stopCleanupTimer() {
+        clearTimeout(this._cleanupTimeout);
+    }
+
     protected deleteExpiredEntries(recordStats: boolean = this.options.recordStats): void {
         const toDelete: K[] = [];
         this.data.forEach(entry => {
@@ -161,6 +165,10 @@ export abstract class CacheBase<K, V> extends EventEmitter {
 
     has(key: K): boolean {
         return this.data.has(key);
+    }
+
+    end(): void {
+        this.stopCleanupTimer();
     }
 
 }
