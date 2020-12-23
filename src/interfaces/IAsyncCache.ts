@@ -1,8 +1,9 @@
 import { AsyncMappingFunction, MappingFunction } from "../loaders";
 import { CacheStats } from "../CacheStats";
 import { Options } from "../caches/CacheBase";
+import { IEndable } from "./IEndable";
 
-export interface IAsyncCache<K, V> {
+export interface IAsyncCache<K, V> extends IEndable {
 
     readonly options: Options;
     readonly stats: CacheStats;
@@ -93,6 +94,4 @@ export interface IAsyncCache<K, V> {
     keys(): Array<K>;
 
     has(key: K): boolean;
-
-    end(): void;
 }

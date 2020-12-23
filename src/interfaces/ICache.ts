@@ -1,8 +1,9 @@
 import { MappingFunction } from "../loaders";
 import { CacheStats } from "../CacheStats";
 import { Options } from "../caches/CacheBase";
+import { IEndable } from "./IEndable";
 
-export interface ICache<K, V> {
+export interface ICache<K, V> extends IEndable {
 
     readonly options: Options;
     readonly stats: CacheStats;
@@ -70,7 +71,5 @@ export interface ICache<K, V> {
     keys(): Array<K>;
 
     has(key: K): boolean;
-
-    end(): void;
 
 }
