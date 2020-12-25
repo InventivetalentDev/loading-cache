@@ -1,5 +1,5 @@
 ## loading-cache
-Caching utility for NodeJS with loading functionality
+Caching utility for NodeJS with loading functionality, based on [ben-manes/caffeine](https://github.com/ben-manes/caffeine)
 
 
 # Usage
