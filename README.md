@@ -7,7 +7,7 @@ npm install --save @inventivetalent/loading-cache
 
 # Usage
 
-## Sync
+## [Sync](https://inventivetalent.org/loading-cache/classes/_src_caches_loadingcache_.loadingcache.html)
 ```typescript
 import { Caches, Time, LoadingCache } from "@inventivetalent/loading-cache";
 
@@ -17,7 +17,7 @@ const cache = Caches.builder()
     .build(key => Math.random() * 100);
 ```
 
-## Async
+## [Async](https://inventivetalent.org/loading-cache/classes/_src_caches_asyncloadingcache_.asyncloadingcache.html)
 ```typescript
 import { Caches, Time, AsyncLoadingCache } from "@inventivetalent/loading-cache";
 
