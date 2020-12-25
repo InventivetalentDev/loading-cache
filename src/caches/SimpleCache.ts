@@ -3,11 +3,12 @@ import { MappingFunction } from "../loaders";
 import { ICache } from "../interfaces/ICache";
 import { CacheStats } from "../CacheStats";
 import { asArray } from "../util";
+import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 /**
  * Simple cache without automated loading functionality
  */
-export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V> {
+export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, ICacheEventEmitter {
 
     constructor(options?: Options) {
         super(options);

@@ -5,11 +5,12 @@ import { ICache } from "../interfaces/ICache";
 import { CacheStats } from "../CacheStats";
 import { EventEmitter } from "events";
 import { CacheEvents } from "../CacheEvents";
+import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 export interface Options extends BaseOptions {
 }
 
-export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V> {
+export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, ICacheEventEmitter {
 
     private readonly _cache: SimpleCache<K, V>;
 

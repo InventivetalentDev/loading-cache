@@ -3,6 +3,7 @@ import { Time } from "../util/Time";
 import { CacheStats } from "../CacheStats";
 import { CacheEvents } from "../CacheEvents";
 import { asArray } from "../util";
+import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
@@ -51,7 +52,7 @@ export interface Options {
 /**
  * Base class for all cache implementations
  */
-export abstract class CacheBase<K, V> extends EventEmitter {
+export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEventEmitter {
 
     private readonly data: Map<K, Entry<K, V>> = new Map<K, Entry<K, V>>();
     private readonly _stats: CacheStats = new CacheStats();
