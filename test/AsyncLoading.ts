@@ -1,7 +1,7 @@
 import { should } from 'chai';
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-import { AsyncLoadingCache } from "../src";
+import { AsyncLoadingCache, Caches } from "../src";
 import { Time } from "../src/util/Time";
 import { CacheStats } from "../src/CacheStats";
 
@@ -13,15 +13,15 @@ describe("AsyncLoadingCache<string, string>", function () {
     describe("#init", function () {
         this.timeout(5);
         it("should create a new cache with options", function () {
-            cache = new AsyncLoadingCache<string, string>({
-                expireAfterWrite: Time.seconds(1),
-                expireAfterAccess: Time.seconds(1),
-                expirationInterval: Time.millis(500)
-            }, key => new Promise<string>(resolve => {
-                setTimeout(() => {
-                    resolve(key + "a479646163796461");
-                }, 100 + Math.random() * 100);
-            }));
+            cache = Caches.builder()
+                .expireAfterAccess(Time.seconds(1))
+                .expireAfterWrite(Time.seconds(1))
+                .expirationInterval(Time.millis(500))
+                .buildAsync(key => new Promise<string>(resolve => {
+                    setTimeout(() => {
+                        resolve(key + "a479646163796461");
+                    }, 100 + Math.random() * 100);
+                }));
             cache.options.expireAfterAccess.should.equal(1000);
             cache.options.expireAfterWrite.should.equal(1000);
             cache.options.expirationInterval.should.equal(500);

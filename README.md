@@ -9,25 +9,26 @@ npm install --save @inventivetalent/loading-cache
 
 ## Sync
 ```typescript
-import { LoadingCache, Time } from "@inventivetalent/loading-cache";
+import { Caches, Time, LoadingCache } from "@inventivetalent/loading-cache";
 
-const cache = new LoadingCache<string, number>({
-    expireAfterAccess: Time.minutes(5),
-    expireAfterWrite: Time.minutes(10)
-}, key => Math.random() * 100);
+const cache = Caches.builder()
+    .expireAfterWrite(Time.minutes(10))
+    .expireAfterAccess(Time.minutes(5))
+    .build(key => Math.random() * 100);
 ```
 
 ## Async
 ```typescript
-import { AsyncLoadingCache, Time } from "@inventivetalent/loading-cache";
+import { Caches, Time, AsyncLoadingCache } from "@inventivetalent/loading-cache";
 
-const cache = new AsyncLoadingCache<string, number>({
-        expireAfterAccess: Time.minutes(5),
-        expireAfterWrite: Time.minutes(10)
-    }, key => new Promise(resolve => {
-        setTimeout(() => {
-            resolve(Math.random() * 100);
-        }, Math.random() * 100);
-    })
-);
+const cache = Caches.builder()
+    .expireAfterWrite(Time.minutes(10))
+    .expireAfterAccess(Time.minutes(5))
+    .buildAsync(
+        key => new Promise(resolve => {
+            setTimeout(() => {
+                resolve(Math.random() * 100);
+            }, Math.random() * 10);
+        })
+    );
 ```

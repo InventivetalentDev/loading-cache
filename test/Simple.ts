@@ -5,6 +5,7 @@ import { SimpleCache } from "../src/caches/SimpleCache";
 import { Time } from "../src/util/Time";
 import { CacheStats } from "../src/CacheStats";
 import { CacheEvents } from "../src/CacheEvents";
+import { Caches } from "../src";
 
 chai.use(chaiAsPromised);
 should();
@@ -13,11 +14,11 @@ describe("SimpleCache<string, string>", function () {
     let cache: SimpleCache<string, string>;
     describe("#init", function () {
         it("should create a new cache with options", function () {
-            cache = new SimpleCache<string, string>({
-                expireAfterWrite: Time.seconds(1),
-                expireAfterAccess: Time.seconds(1),
-                expirationInterval: Time.millis(500)
-            });
+            cache = Caches.builder()
+                .expireAfterWrite(Time.seconds(1))
+                .expireAfterAccess(Time.seconds(1))
+                .expirationInterval(Time.millis(500))
+                .build();
             cache.options.expireAfterAccess.should.equal(1000);
             cache.options.expireAfterWrite.should.equal(1000);
             cache.options.expirationInterval.should.equal(500);

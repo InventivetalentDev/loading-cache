@@ -1,7 +1,7 @@
 import { should } from 'chai';
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-import { LoadingCache } from "../src";
+import { Caches, LoadingCache } from "../src";
 import { Time } from "../src/util/Time";
 import { CacheStats } from "../src/CacheStats";
 
@@ -13,11 +13,11 @@ describe("LoadingCache<string, string>", function () {
     describe("#init", function () {
         this.timeout(5);
         it("should create a new cache with options", function () {
-            cache = new LoadingCache<string, string>({
-                expireAfterWrite: Time.seconds(1),
-                expireAfterAccess: Time.seconds(1),
-                expirationInterval: Time.millis(500)
-            }, key => key + "l548994616");
+            cache = Caches.builder()
+                .expireAfterAccess(Time.seconds(1))
+                .expireAfterWrite(Time.seconds(1))
+                .expirationInterval(Time.millis(500))
+                .build(key => key + "l548994616");
             cache.options.expireAfterAccess.should.equal(1000);
             cache.options.expireAfterWrite.should.equal(1000);
             cache.options.expirationInterval.should.equal(500);
