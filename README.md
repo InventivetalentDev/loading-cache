@@ -1,12 +1,15 @@
 ## loading-cache
 Caching utility for NodeJS with loading functionality, based on [ben-manes/caffeine](https://github.com/ben-manes/caffeine)
 
+```
+npm install --save @inventivetalent/loading-cache
+```
 
 # Usage
 
 ## Sync
 ```typescript
-import { LoadingCache, Time } from "loading-cache";
+import { LoadingCache, Time } from "@inventivetalent/loading-cache";
 
 const cache = new LoadingCache<string, number>({
     expireAfterAccess: Time.minutes(5),
@@ -16,7 +19,7 @@ const cache = new LoadingCache<string, number>({
 
 ## Async
 ```typescript
-import { AsyncLoadingCache, Time } from "loading-cache";
+import { AsyncLoadingCache, Time } from "@inventivetalent/loading-cache";
 
 const cache = new AsyncLoadingCache<string, number>({
         expireAfterAccess: Time.minutes(5),
