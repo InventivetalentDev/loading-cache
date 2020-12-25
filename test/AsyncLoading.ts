@@ -36,7 +36,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#put", function () {
-        this.timeout(2);
+        this.timeout(5);
         it("should put new entries", function () {
             cache.put("a", "1746161");
             cache.put("b", "5616148");
@@ -45,7 +45,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#get-present", function () {
-        this.timeout(5);
+        this.timeout(10);
         it("should get existing entries quickly", function (done) {
             let a = cache.getIfPresent("a"); // HIT
             a.should.be.a("Promise");
@@ -68,7 +68,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#get-sync-load", function () {
-        this.timeout(5);
+        this.timeout(10);
         it("should get new values using sync mapping function", function () {
             let d = cache.get("d", k => k + "9191987");// MISS
             d.should.be.a("Promise");
@@ -121,7 +121,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#expiration", function () {
-        this.timeout(2000);
+        this.timeout(4000);
         it("should emit 'expire' event on expiration", function (done) {
             let c = 0;
             cache.on("expire", function (k, v) {
@@ -130,13 +130,13 @@ describe("AsyncLoadingCache<string, string>", function () {
             setTimeout(function () {
                 c.should.equal(10);
                 done();
-            }, 1500);
+            }, 2000);
         });
         it("should expire entries after 1 second", function (done) {
             setTimeout(function () {
                 cache.keys().length.should.equal(0);
                 done();
-            }, 1500);
+            }, 2000);
         });
     });
     describe("#stats", function () {

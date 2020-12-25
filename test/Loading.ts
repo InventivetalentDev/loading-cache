@@ -32,7 +32,7 @@ describe("LoadingCache<string, string>", function () {
         });
     });
     describe("#put", function () {
-        this.timeout(2);
+        this.timeout(5);
         it("should put new entries", function () {
             cache.put("a", "12345");
             cache.put("b", "5134676");
@@ -41,7 +41,7 @@ describe("LoadingCache<string, string>", function () {
         });
     });
     describe("#get", function () {
-        this.timeout(5);
+        this.timeout(10);
         it("should get existing entries", function () {
             cache.getIfPresent("a").should.equal("12345"); // HIT
             cache.getIfPresent("x").should.equal("61689646"); // HIT
@@ -58,20 +58,20 @@ describe("LoadingCache<string, string>", function () {
         });
     });
     describe("#load", function () {
-        this.timeout(5);
+        this.timeout(10);
         it("should load new values from loader", function () {
             cache.get("h").should.equal("hl548994616"); // MISS
             cache.get("i").should.equal("il548994616"); // MISS
         });
     });
     describe("#keys", function () {
-        this.timeout(2);
+        this.timeout(5);
         it("should contain 8 keys", function () {
             cache.keys().should.eql(["a", "b", "x", "y", "d", "e", "h", "i"]);
         });
     });
     describe("#expiration", function () {
-        this.timeout(2000);
+        this.timeout(4000);
         it("should emit 'expire' event on expiration", function (done) {
             let c = 0;
             cache.on("expire", function (k, v) {
@@ -80,13 +80,13 @@ describe("LoadingCache<string, string>", function () {
             setTimeout(function () {
                 c.should.equal(8);
                 done();
-            }, 1500);
+            }, 2000);
         });
         it("should expire entries after 1 second", function (done) {
             setTimeout(function () {
                 cache.keys().length.should.equal(0);
                 done();
-            }, 1500);
+            }, 2000);
         });
     });
     describe("#stats", function () {
