@@ -3,8 +3,8 @@
   "version": "0.3.0",
   "description": "loading cache based on ben-manes/caffeine and node-cache",
   "license": "MIT",
-  "main": "dist/index.js",
-  "typings": "dist/index",
+  "main": "dist/src/index.js",
+  "typings": "dist/src/index",
   "author": {
     "name": "Haylee Schäfer",
     "email": "mail@inventivetalent.org",
