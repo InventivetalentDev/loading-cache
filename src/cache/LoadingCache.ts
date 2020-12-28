@@ -1,14 +1,10 @@
 import { Loader, MappingFunction, MultiLoader } from "../loaders";
-import { Options as BaseOptions } from "./CacheBase";
+import { Options } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
-import { ICache } from "../interfaces/ICache";
+import { ICache, ICacheEventEmitter } from "../interfaces";
 import { CacheStats } from "../CacheStats";
 import { EventEmitter } from "events";
 import { CacheEvents } from "../CacheEvents";
-import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
-
-export interface Options extends BaseOptions {
-}
 
 export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, ICacheEventEmitter {
 

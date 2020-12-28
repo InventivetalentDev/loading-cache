@@ -1,8 +1,5 @@
-import { Options } from "./caches/CacheBase";
 import { AsyncLoader, AsyncMultiLoader, Loader, MultiLoader } from "./loaders";
-import { SimpleCache } from "./caches/SimpleCache";
-import { LoadingCache } from "./caches/LoadingCache";
-import { AsyncLoadingCache } from "./caches/AsyncLoadingCache";
+import { AsyncLoadingCache, LoadingCache, Options, SimpleCache } from "./cache";
 
 class CacheBuilder {
 

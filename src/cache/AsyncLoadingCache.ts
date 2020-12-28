@@ -1,5 +1,5 @@
 import { AsyncLoader, AsyncMappingFunction, AsyncMultiLoader, MappingFunction } from "../loaders";
-import { Options as BaseOptions } from "./CacheBase";
+import { Options } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { IAsyncCache } from "../interfaces/IAsyncCache";
 import { CacheStats } from "../CacheStats";
@@ -7,9 +7,6 @@ import { CacheEvents } from "../CacheEvents";
 import { EventEmitter } from "events";
 import { asArray, keyPromiseMapToPromiseContainingMap } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
-
-export interface Options extends BaseOptions {
-}
 
 
 export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache<K, V>, ICacheEventEmitter {

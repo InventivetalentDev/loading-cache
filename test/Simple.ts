@@ -1,7 +1,7 @@
 import { should } from 'chai';
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-import { SimpleCache } from "../src/caches/SimpleCache";
+import { SimpleCache } from "../src/cache/SimpleCache";
 import { Time } from "../src/util/Time";
 import { CacheStats } from "../src/CacheStats";
 import { CacheEvents } from "../src/CacheEvents";

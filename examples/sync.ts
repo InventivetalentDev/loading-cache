@@ -1,5 +1,4 @@
-import { Caches, LoadingCache } from "../src";
-import { Time } from "../src/util/Time";
+import { Caches, LoadingCache, Time } from "../src";
 
 const cache = Caches.builder()
     .expireAfterWrite(Time.minutes(10))

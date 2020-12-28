@@ -1,4 +1,4 @@
-import { Options } from "../caches/CacheBase";
+import { Options } from "../cache/CacheBase";
 import { CacheStats } from "../CacheStats";
 
 export interface ICacheBase<K, V> {

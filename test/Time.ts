@@ -1,7 +1,7 @@
 import { should } from 'chai';
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
-import { Time } from "../src/util/Time";
+import { Time } from "../src";
 
 chai.use(chaiAsPromised);
 should();
