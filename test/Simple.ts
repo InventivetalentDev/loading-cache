@@ -62,7 +62,7 @@ describe("SimpleCache<string, string>", function () {
         });
     });
     describe("#expiration", function () {
-        this.timeout(2000);
+        this.timeout(3500);
         it("should emit 'expire' event on expiration", function (done) {
             let c = 0;
             cache.on("expire", function (k, v) {

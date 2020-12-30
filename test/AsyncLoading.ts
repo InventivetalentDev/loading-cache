@@ -119,7 +119,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#expiration", function () {
-        this.timeout(4000);
+        this.timeout(4500);
         it("should emit 'expire' event on expiration", function (done) {
             let c = 0;
             cache.on("expire", function (k, v) {
