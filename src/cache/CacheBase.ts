@@ -1,9 +1,9 @@
 import { EventEmitter } from "events";
-import { Time } from "../util/Time";
 import { CacheStats } from "../CacheStats";
 import { CacheEvents } from "../CacheEvents";
 import { asArray } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
+import { Time } from "@inventivetalent/time";
 
 const DEFAULT_OPTIONS: Options = {
     expireAfterAccess: 0,
