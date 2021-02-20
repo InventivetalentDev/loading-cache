@@ -170,6 +170,7 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
 
     end(): void {
         this.stopCleanupTimer();
+        this.data.clear();
     }
 
 }
