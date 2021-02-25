@@ -13,7 +13,7 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
     readonly loader: Loader<K, V>;
     readonly multiLoader: MultiLoader<K, V>;
 
-    constructor(options: Options, loader: Loader<K, V>, multiLoader?: MultiLoader<K, V>) {
+    constructor(options: Options, loader?: Loader<K, V>, multiLoader?: MultiLoader<K, V>) {
         super({});
         this._cache = new SimpleCache<K, V>(options);
 
