@@ -3,7 +3,11 @@ import { ICache, ICacheEventEmitter } from "../interfaces";
 import { MappingFunction } from "../loaders";
 import { SimpleCache } from "./SimpleCache";
 
-export class PersistentCache<K, V> extends SimpleCache<K, V> {
+/**
+ * Wrapper around simple string KV getter/setter/deleter functions
+ * Intended for e.g. creating a persistent cache using the browser's localStorage
+ */
+export class WrappedCache<K, V> extends SimpleCache<K, V> {
 
     constructor(options: Options, readonly getter: (key: string) => string | null, readonly setter: (key: string, value: string) => void, readonly deleter: (key: string) => void | boolean, readonly allDeleter?: () => void) {
         super(options);
