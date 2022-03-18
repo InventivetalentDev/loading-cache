@@ -38,17 +38,20 @@ class CacheBuilder {
 
     build<K, V>(): SimpleCache<K, V>;
     build<K, V>(loader: Loader<K, V>, multiLoader?: MultiLoader<K, V>): LoadingCache<K, V>;
-    build<K, V>(loader?: Loader<K, V>, multiLoader?: MultiLoader<K, V>): SimpleCache<K, V> | LoadingCache<K, V> {
+    build<K, V>(loader?: Loader<K, V>, multiLoader?: MultiLoader<K, V>, loadingInternalCache?: (options: Options) => SimpleCache<K, V>): SimpleCache<K, V> | LoadingCache<K, V> {
         if (typeof loader === "undefined") {
+            if (loadingInternalCache) {
+                return loadingInternalCache(this.options);
+            }
             return new SimpleCache<K, V>(this.options);
         }
-        return new LoadingCache<K, V>(this.options, loader, multiLoader);
+        return new LoadingCache<K, V>(this.options, loader, multiLoader, loadingInternalCache);
     }
 
     buildAsync<K, V>(): AsyncLoadingCache<K, V>;
     buildAsync<K, V>(loader: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>): AsyncLoadingCache<K, V>;
-    buildAsync<K, V>(loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>): AsyncLoadingCache<K, V> {
-        return new AsyncLoadingCache<K, V>(this.options, loader, multiLoader);
+    buildAsync<K, V>(loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, loadingInternalCache?: (options: Options) => SimpleCache<K, Promise<V>>): AsyncLoadingCache<K, V> {
+        return new AsyncLoadingCache<K, V>(this.options, loader, multiLoader, loadingInternalCache);
     }
 
 }
