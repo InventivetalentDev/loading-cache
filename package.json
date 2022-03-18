@@ -1,6 +1,6 @@
 {
   "name": "@inventivetalent/loading-cache",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "loading cache based on ben-manes/caffeine and node-cache",
   "license": "MIT",
   "main": "dist/src/index.js",
