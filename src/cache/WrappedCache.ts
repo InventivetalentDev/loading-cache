@@ -20,7 +20,7 @@ export class WrappedCache<K, V> extends SimpleCache<K, V> {
         }
         const v = this.getter(JSON.stringify(key));
         if (v) {
-            const parsed = JSON.parse(v);
+            const parsed = Entry.fromJson<K, V>(key, JSON.parse(v));
             this.putEntry(key, parsed);
             return parsed;
         }

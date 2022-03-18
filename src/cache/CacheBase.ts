@@ -186,6 +186,12 @@ export class Entry<K, V> {
         this.key = key;
     }
 
+    static fromJson<K, V>(key: any, value: any): Entry<K, V> {
+        const entry = new Entry<K, V>(key);
+        entry.value = value;
+        return entry;
+    }
+
     getKey(): K {
         this.accessTime = Time.now
         return this.key;
