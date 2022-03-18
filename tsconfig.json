@@ -4,8 +4,9 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "module": "commonjs",
+    "module": "ES6",
     "target": "es6",
+    "moduleResolution": "Node",
     "outDir": "dist",
     "sourceMap": true,
     "lib": [
