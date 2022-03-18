@@ -188,7 +188,9 @@ export class Entry<K, V> {
 
     static fromJson<K, V>(key: any, value: any): Entry<K, V> {
         const entry = new Entry<K, V>(key);
-        entry.value = value;
+        entry.value = value["value"];
+        entry.accessTime = value["accessTime"];
+        entry.writeTime = value["writeTime"];
         return entry;
     }
 
