@@ -7,7 +7,7 @@
     "module": "ES6",
     "target": "es6",
     "moduleResolution": "Node",
-    "outDir": "dist",
+    "outDir": "dist/esm",
     "sourceMap": true,
     "lib": [
       "es5",
@@ -24,8 +24,7 @@
     ],
     "baseUrl": "."
   },
-  "exclude": [
-    "node_modules",
-    "dist"
+  "include": [
+    "./src"
   ]
 }

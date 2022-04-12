@@ -3,8 +3,12 @@
   "version": "0.5.6",
   "description": "loading cache based on ben-manes/caffeine and node-cache",
   "license": "MIT",
-  "main": "dist/src/index.js",
-  "typings": "dist/src/index",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/cjs/index",
+  "files": [
+    "dist/"
+  ],
   "author": {
     "name": "Haylee Schäfer",
     "email": "mail@inventivetalent.org",
@@ -36,12 +40,12 @@
   "scripts": {
     "clean": "rm -rf dist",
     "test": "mocha -r ts-node/register test/**.ts",
-    "compile": "tsc",
+    "compile": "tsc -p tsconfig-esm.json && tsc -p tsconfig-cjs.json",
     "build": "npm run clean && npm run compile",
     "doc": "typedoc --out docs src"
   },
   "dependencies": {
-    "@inventivetalent/time": "^1.0.1",
+    "@inventivetalent/time": "^1.0.2",
     "node-cache": "^5.1.2",
     "ts-node": "^9.1.1",
     "typescript": "^4.1.3"
