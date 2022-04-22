@@ -134,12 +134,16 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     keyPromiseMapToPromiseContainingMap<K, V>(present),
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
-                    for (let [key, promise] of pendingPromises) {
+                    pendingPromises.forEach((promise, key) => {
                         const v = newMap.get(key);
-                        if (v) {
+                        if (v instanceof Promise) {
+                            v
+                                .then(v => promise.resolve(v))
+                                .catch(e => promise.reject(e));
+                        } else {
                             promise.resolve(v);
                         }
-                    }
+                    });
                     this.putAll(newMap);
 
                     const combined = new Map<K, V>();
