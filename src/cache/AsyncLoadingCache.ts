@@ -5,7 +5,7 @@ import { IAsyncCache } from "../interfaces/IAsyncCache";
 import { CacheStats } from "../CacheStats";
 import { CacheEvents } from "../CacheEvents";
 import { EventEmitter } from "events";
-import { asArray, keyPromiseMapToPromiseContainingMap } from "../util";
+import { asArray, CompletablePromise, keyPromiseMapToPromiseContainingMap } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 
@@ -18,10 +18,10 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
 
     constructor(options: Options, loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, internalCache?: (options: Options) => SimpleCache<K, Promise<V>>) {
         super({});
-        if (internalCache) {
+        if (typeof internalCache !== "undefined") {
             this._cache = internalCache(options);
         } else {
-            this._cache = new SimpleCache<K, Promise<V>>();
+            this._cache = new SimpleCache<K, Promise<V>>(options);
         }
 
         this.loader = loader;
@@ -120,11 +120,21 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     mappedPromise = Promise.resolve(mapped);
                 }
 
+                // populate cache with pending promises to mark them as loading
+                let pendingPromises: Map<K, CompletablePromise<V>> = new Map();
+                for (let key of missingKeys) {
+                    let promise = new CompletablePromise<V>();
+                    this.put(key, promise.promise);
+                    pendingPromises.set(key, promise);
+                }
+
                 return Promise.all([
                     keyPromiseMapToPromiseContainingMap<K, V>(present),
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
-                    this.putAll(newMap);
+                    for (let [key, promise] of pendingPromises) {
+                        promise.resolve(newMap.get(key));
+                    }
 
                     const combined = new Map<K, V>();
                     presentMap.forEach((v, k) => combined.set(k, v));

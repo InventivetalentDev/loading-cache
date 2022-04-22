@@ -18,7 +18,7 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
         if (internalCache) {
             this._cache = internalCache(options);
         } else {
-            this._cache = new SimpleCache<K, V>();
+            this._cache = new SimpleCache<K, V>(options);
         }
 
         this.loader = loader;

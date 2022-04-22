@@ -21,6 +21,7 @@ describe("AsyncLoadingCache<string, string>", function () {
                         resolve(key + "a479646163796461");
                     }, 100 + Math.random() * 100);
                 }));
+            console.log(cache.options)
             cache.options.expireAfterAccess.should.equal(1000);
             cache.options.expireAfterWrite.should.equal(1000);
             cache.options.expirationInterval.should.equal(500);

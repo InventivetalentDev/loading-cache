@@ -39,8 +39,8 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "test": "mocha -r ts-node/register test/**.ts",
-    "compile": "tsc -p tsconfig-esm.json && tsc -p tsconfig-cjs.json",
+    "test": "mocha -r test/mocha.env -r ts-node/register test/**.ts",
+    "compile": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
     "build": "npm run clean && npm run compile",
     "doc": "typedoc --out docs src"
   },

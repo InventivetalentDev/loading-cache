@@ -5,12 +5,11 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "module": "ES6",
-    "target": "es6",
+    "target": "ES6",
     "moduleResolution": "Node",
     "outDir": "dist/esm",
     "sourceMap": true,
     "lib": [
-      "es5",
       "es6",
       "dom"
     ],
