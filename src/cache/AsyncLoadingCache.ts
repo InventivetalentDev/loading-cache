@@ -152,6 +152,9 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     return combined;
                 })
             }
+
+            // no missing keys to load
+            return keyPromiseMapToPromiseContainingMap<K, V>(present);
         }
         if (this.multiLoader) {
             return this.getAll(keys, this.multiLoader);
