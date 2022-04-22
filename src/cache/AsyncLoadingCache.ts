@@ -120,15 +120,8 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     mappedPromise = Promise.resolve(mapped);
                 }
 
-
                 // populate cache with pending promises to mark them as loading
-                // let pendingPromises: Map<K, CompletablePromise<V>> = new Map();
                 for (let key of missingKeys) {
-                    // let promise = new CompletablePromise<V>();
-                    // if (!this.has(key)) {
-                    //     this.put(key, promise.promise);
-                    // }
-                    // pendingPromises.set(key, promise);
                     this.cache.put(key, new CompletablePromise<V>());
                 }
 
@@ -137,22 +130,8 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
                     for (let key of missingKeys) {
-                        const completable = this.cache.getIfPresent(key);
-                        if (completable && !completable.resolved) {
-                            completable.resolve(newMap.get(key));
-                        }
+                        this.cache.getIfPresent(key)?.resolve(newMap.get(key));
                     }
-                    // for(const [key, promise] of pendingPromises.entries()) {
-                    //     const v = newMap.get(key);
-                    //     if (v instanceof Promise) {
-                    //         v
-                    //             .then(v => promise.resolve(v))
-                    //             .catch(e => promise.reject(e));
-                    //     } else {
-                    //         promise.resolve(v);
-                    //     }
-                    // }
-                    // this.putAll(newMap);
 
                     const combined = new Map<K, V>();
                     presentMap.forEach((v, k) => combined.set(k, v));

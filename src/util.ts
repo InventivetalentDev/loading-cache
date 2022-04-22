@@ -78,7 +78,7 @@ export class CompletablePromise<T> {
 
     resolve(value?: T | PromiseLike<T>): void {
         if (this._resolved) {
-            throw new Error("Promise already resolved");
+            return;
         }
         this._resolve(value);
         this._resolved = true;
@@ -86,7 +86,7 @@ export class CompletablePromise<T> {
 
     reject(reason?: any): void {
         if (this._resolved) {
-            throw new Error("Promise already resolved");
+            return;
         }
         this._reject(reason);
         this._resolved = true;
