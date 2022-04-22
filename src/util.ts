@@ -89,11 +89,11 @@ export class CompletablePromise<T> {
     }
 
     then(fulfilled?: (value: T) => T | PromiseLike<T>, rejected?: (reason: any) => T | PromiseLike<T>): Promise<T> {
-        return this._promise.then(fulfilled, rejected);
+        return this._promise.then(v => fulfilled(v), e => rejected(e));
     }
 
     catch(rejected?: (reason: any) => T | PromiseLike<T>): Promise<T> {
-        return this._promise.catch(rejected);
+        return this._promise.catch(e => rejected(e));
     }
 
 
