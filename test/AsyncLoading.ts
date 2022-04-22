@@ -54,25 +54,31 @@ describe("AsyncLoadingCache<string, string>", function () {
         it("should get existing entries quickly  #1", function () {
             let a = cache.getIfPresent("a"); // HIT
             a.should.be.a("Promise");
-            a.should.be.fulfilled;
-            return a.should.eventually.equal("1746161");
+            return Promise.all([
+                a.should.be.fulfilled,
+                a.should.eventually.equal("1746161")
+            ])
         });
         it("should get existing entries quickly #2", function () {
             let x = cache.getIfPresent("x"); // HIT
             x.should.be.a("Promise");
-            x.should.be.fulfilled;
-            return x.should.eventually.equal("6189749");
+            return Promise.all([
+                x.should.be.fulfilled,
+                x.should.eventually.equal("6189749")
+            ])
         });
         it("should get existing entries quickly #3", function () {
             let mapPromise = cache.getAllPresent(["b", "y"]); // 2xHIT
             mapPromise.should.be.a("Promise");
-            mapPromise.should.be.fulfilled;
-            return mapPromise.then(map => {
-                map.should.be.a("Map");
-                map.size.should.equal(2);
-                map.get("b").should.equal("5616148");
-                map.get("y").should.equal("1619849");
-            });
+            return Promise.all([
+                mapPromise.should.be.fulfilled,
+                mapPromise.then(map => {
+                    map.should.be.a("Map");
+                    map.size.should.equal(2);
+                    map.get("b").should.equal("5616148");
+                    map.get("y").should.equal("1619849");
+                })
+            ])
         });
     });
     describe("#get-sync-load", function () {
@@ -129,37 +135,64 @@ describe("AsyncLoadingCache<string, string>", function () {
     describe("#load-after-all", function () {
         this.timeout(2000);
         it("should start loading after calling getAll", function () {
+            this.timeout(500)
             console.log(cache.keys())
             console.log('getAll')
             let r = cache.getAll(["o", "p", "q"]); // MISS
             console.log(r);
             r.should.be.a("Promise");
-            r.should.not.be.fulfilled;
-            return r.should.become(new Map([["o", "oa479646163796461"],[ "p", "pa479646163796461"], ["q", "qa479646163796461"]]));
+            setTimeout(() => {
+                console.log(r);
+            }, 250);
+            return Promise.all([
+                r.should.be.fulfilled,
+                r.should.become(new Map([["o", "oa479646163796461"],[ "p", "pa479646163796461"], ["q", "qa479646163796461"]]))
+            ])
+        });
+        it("should not load after calling getAll again", function () {
+            this.timeout(10)
+            console.log(cache.keys())
+            console.log('getAll')
+            let r = cache.getAll(["o", "p", "q"]); // HIT
+            console.log(r);
+            r.should.be.a("Promise");
+            return Promise.all([
+                r.should.be.fulfilled,
+                r.should.become(new Map([["o", "oa479646163796461"],[ "p", "pa479646163796461"], ["q", "qa479646163796461"]]))
+            ])
         });
         it("should not load again after calling getAll #1", function () {
+            this.timeout(10)
             console.log('getIfPresent')
             let b = cache.getIfPresent("o"); // HIT
             console.log(b)
             b.should.be.a("Promise");
-            b.should.be.fulfilled;
-            return b.should.become("oa479646163796461");
+            return Promise.all([
+                b.should.be.fulfilled,
+                b.should.become("oa479646163796461")
+            ]);
         });
         it("should not load again after calling getAll #2", function () {
+            this.timeout(10)
             console.log('get')
             let y = cache.get("p"); // HIT
             console.log(y)
             y.should.be.a("Promise");
-            y.should.be.fulfilled;
-            return y.should.become("pa479646163796461");
+            return Promise.all([
+                y.should.be.fulfilled,
+                y.should.become("pa479646163796461")
+            ])
         });
         it("should not load again after calling getAll #3", function () {
+            this.timeout(10)
             console.log('get')
             let y = cache.get("q"); // HIT
             console.log(y)
             y.should.be.a("Promise");
-            y.should.be.fulfilled;
-            return y.should.become("qa479646163796461");
+            return Promise.all([
+                y.should.be.fulfilled,
+                y.should.become("qa479646163796461")
+            ]);
         });
     });
     describe("#keys", function () {
@@ -193,7 +226,7 @@ describe("AsyncLoadingCache<string, string>", function () {
     });
     describe("#stats", function () {
         it("should count hits", function () {
-            cache.stats.get(CacheStats.HIT).should.equal(7); // excluding the loads
+            cache.stats.get(CacheStats.HIT).should.equal(10); // excluding the loads
         });
         it("should count misses", function () {
             cache.stats.get(CacheStats.MISS).should.equal(12);
