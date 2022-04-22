@@ -144,7 +144,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                             promise.resolve(v);
                         }
                     }
-                    this.putAll(newMap);
+                    // this.putAll(newMap);
 
                     const combined = new Map<K, V>();
                     presentMap.forEach((v, k) => combined.set(k, v));
