@@ -56,7 +56,9 @@ export class CompletablePromise<T> {
 
     static of<T>(value: Promise<T>): CompletablePromise<T> {
         const promise = new CompletablePromise<T>();
-        value.then(promise.resolve, promise.reject);
+        value
+            .then(v => promise.resolve(v))
+            .catch(e => promise.reject(e));
         return promise;
     }
 
