@@ -140,13 +140,22 @@ describe("AsyncLoadingCache<string, string>", function () {
             console.log('getAll')
             let r = cache.getAll(["o", "p", "q"]); // MISS
             console.log(r);
+
+            console.log('get-after-getAll')
+            let q = cache.get("q"); // HIT
+            console.log(q);
+
             r.should.be.a("Promise");
+            q.should.be.a("Promise");
             setTimeout(() => {
                 console.log(r);
+                console.log(q);
             }, 250);
             return Promise.all([
                 r.should.be.fulfilled,
-                r.should.become(new Map([["o", "oa479646163796461"],[ "p", "pa479646163796461"], ["q", "qa479646163796461"]]))
+                r.should.become(new Map([["o", "oa479646163796461"],[ "p", "pa479646163796461"], ["q", "qa479646163796461"]])),
+                r.should.be.fulfilled,
+                q.should.become("qa479646163796461")
             ])
         });
         it("should not load after calling getAll again", function () {
@@ -226,7 +235,7 @@ describe("AsyncLoadingCache<string, string>", function () {
     });
     describe("#stats", function () {
         it("should count hits", function () {
-            cache.stats.get(CacheStats.HIT).should.equal(10); // excluding the loads
+            cache.stats.get(CacheStats.HIT).should.equal(11); // excluding the loads
         });
         it("should count misses", function () {
             cache.stats.get(CacheStats.MISS).should.equal(12);
