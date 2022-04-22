@@ -5,6 +5,23 @@ export function asArray<K>(iterable: Iterable<K>): Array<K> {
     return Array.from(iterable);
 }
 
+export function keyCompletablePromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K, CompletablePromise<V>>): Promise<Map<K, V>> {
+    return new Promise<Map<K, V>>(resolve => {
+        const keys = keyToPromiseMap.keys();
+        const values = asArray(keyToPromiseMap.values());
+        Promise.all(values.map(p => p.promise)).then(resolvedValues => {
+            const valueMap = new Map<K, V>();
+            let i = 0;
+            // The promises *should* be in the original order of the map
+            for (let key of keys) {
+                let promise = resolvedValues[i++];
+                valueMap.set(key, promise);
+            }
+            resolve(valueMap);
+        })
+    })
+}
+
 export function keyPromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K, Promise<V>>): Promise<Map<K, V>> {
     return new Promise<Map<K, V>>(resolve => {
         const keys = keyToPromiseMap.keys();
@@ -37,6 +54,18 @@ export class CompletablePromise<T> {
         });
     }
 
+    static of<T>(value: Promise<T>): CompletablePromise<T> {
+        const promise = new CompletablePromise<T>();
+        value.then(promise.resolve, promise.reject);
+        return promise;
+    }
+
+    static completedPromise<T>(value: T | PromiseLike<T>): CompletablePromise<T> {
+        const completable = new CompletablePromise<T>();
+        completable.resolve(value);
+        return completable;
+    }
+
     get promise(): Promise<T> {
         return this._promise;
     }
@@ -56,5 +85,14 @@ export class CompletablePromise<T> {
         this._reject(reason);
         this._resolved = true;
     }
+
+    then(fulfilled?: (value: T) => T | PromiseLike<T>, rejected?: (reason: any) => T | PromiseLike<T>): Promise<T> {
+        return this._promise.then(fulfilled, rejected);
+    }
+
+    catch(rejected?: (reason: any) => T | PromiseLike<T>): Promise<T> {
+        return this._promise.catch(rejected);
+    }
+
 
 }

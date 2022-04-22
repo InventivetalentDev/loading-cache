@@ -7,3 +7,5 @@ export * from "./CacheStats";
 export * from "./CacheEvents";
 
 export * from "./interfaces"
+
+export { CompletablePromise } from "./util";

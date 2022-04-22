@@ -1,5 +1,6 @@
 import { AsyncLoader, AsyncMultiLoader, Loader, MultiLoader } from "./loaders";
 import { AsyncLoadingCache, LoadingCache, Options, SimpleCache } from "./cache";
+import { CompletablePromise } from "./util";
 
 class CacheBuilder {
 
@@ -51,8 +52,8 @@ class CacheBuilder {
 
     buildAsync<K, V>(): AsyncLoadingCache<K, V>;
     buildAsync<K, V>(loader: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>): AsyncLoadingCache<K, V>;
-    buildAsync<K, V>(loader: AsyncLoader<K, V>, multiLoader: AsyncMultiLoader<K, V>, loadingInternalCache?: (options: Options) => SimpleCache<K, Promise<V>>): AsyncLoadingCache<K, V>;
-    buildAsync<K, V>(loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, loadingInternalCache?: (options: Options) => SimpleCache<K, Promise<V>>): AsyncLoadingCache<K, V> {
+    buildAsync<K, V>(loader: AsyncLoader<K, V>, multiLoader: AsyncMultiLoader<K, V>, loadingInternalCache?: (options: Options) => SimpleCache<K, CompletablePromise<V>>): AsyncLoadingCache<K, V>;
+    buildAsync<K, V>(loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, loadingInternalCache?: (options: Options) => SimpleCache<K, CompletablePromise<V>>): AsyncLoadingCache<K, V> {
         return new AsyncLoadingCache<K, V>(this.options, loader, multiLoader, loadingInternalCache);
     }
 

@@ -5,23 +5,23 @@ import { IAsyncCache } from "../interfaces/IAsyncCache";
 import { CacheStats } from "../CacheStats";
 import { CacheEvents } from "../CacheEvents";
 import { EventEmitter } from "events";
-import { asArray, CompletablePromise, keyPromiseMapToPromiseContainingMap } from "../util";
+import { asArray, CompletablePromise, keyCompletablePromiseMapToPromiseContainingMap, keyPromiseMapToPromiseContainingMap } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 
 export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache<K, V>, ICacheEventEmitter {
 
-    private readonly _cache: SimpleCache<K, Promise<V>>;
+    private readonly _cache: SimpleCache<K, CompletablePromise<V>>;
 
     readonly loader: AsyncLoader<K, V>;
     readonly multiLoader: AsyncMultiLoader<K, V>;
 
-    constructor(options: Options, loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, internalCache?: (options: Options) => SimpleCache<K, Promise<V>>) {
+    constructor(options: Options, loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, internalCache?: (options: Options) => SimpleCache<K, CompletablePromise<V>>) {
         super({});
         if (typeof internalCache !== "undefined") {
             this._cache = internalCache(options);
         } else {
-            this._cache = new SimpleCache<K, Promise<V>>(options);
+            this._cache = new SimpleCache<K, CompletablePromise<V>>(options);
         }
 
         this.loader = loader;
@@ -34,7 +34,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         return this.cache.options;
     }
 
-    get cache(): SimpleCache<K, Promise<V>> {
+    get cache(): SimpleCache<K, CompletablePromise<V>> {
         return this._cache;
     }
 
@@ -45,7 +45,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
     ///// GET
 
     getIfPresent(key: K): Promise<V | undefined> | undefined {
-        return this.cache.getIfPresent(key);
+        return this.cache.getIfPresent(key)?.promise;
     }
 
     get(key: K): Promise<V>;
@@ -73,7 +73,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
             } else {
                 mappedPromise = Promise.resolve(mapped);
             }
-            this.put(key, mappedPromise);
+            this.cache.put(key, CompletablePromise.of<V>(mappedPromise));
             if (this.options.recordStats) {
                 if (mapped) {
                     this.stats.inc(CacheStats.LOAD_SUCCESS)
@@ -93,7 +93,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
 
     getAllPresent(keys: Iterable<K>): Promise<Map<K, V>> {
         const present = this.cache.getAllPresent(keys);
-        return keyPromiseMapToPromiseContainingMap<K, V>(present);
+        return keyCompletablePromiseMapToPromiseContainingMap<K, V>(present);
     }
 
     getAll(keys: Iterable<K>): Promise<Map<K, V>>;
@@ -120,30 +120,35 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     mappedPromise = Promise.resolve(mapped);
                 }
 
+
                 // populate cache with pending promises to mark them as loading
                 let pendingPromises: Map<K, CompletablePromise<V>> = new Map();
                 for (let key of missingKeys) {
-                    let promise = new CompletablePromise<V>();
-                    if (!this.has(key)) {
-                        this.put(key, promise.promise);
-                    }
-                    pendingPromises.set(key, promise);
+                    // let promise = new CompletablePromise<V>();
+                    // if (!this.has(key)) {
+                    //     this.put(key, promise.promise);
+                    // }
+                    // pendingPromises.set(key, promise);
+                    this.cache.put(key, new CompletablePromise<V>());
                 }
 
                 return Promise.all([
-                    keyPromiseMapToPromiseContainingMap<K, V>(present),
+                    keyCompletablePromiseMapToPromiseContainingMap<K, V>(present),
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
-                    for(const [key, promise] of pendingPromises.entries()) {
-                        const v = newMap.get(key);
-                        if (v instanceof Promise) {
-                            v
-                                .then(v => promise.resolve(v))
-                                .catch(e => promise.reject(e));
-                        } else {
-                            promise.resolve(v);
-                        }
+                    for (const [key, value] of newMap.entries()) {
+                        this.cache.getIfPresent(key)?.resolve(value);
                     }
+                    // for(const [key, promise] of pendingPromises.entries()) {
+                    //     const v = newMap.get(key);
+                    //     if (v instanceof Promise) {
+                    //         v
+                    //             .then(v => promise.resolve(v))
+                    //             .catch(e => promise.reject(e));
+                    //     } else {
+                    //         promise.resolve(v);
+                    //     }
+                    // }
                     // this.putAll(newMap);
 
                     const combined = new Map<K, V>();
@@ -158,7 +163,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
             }
 
             // no missing keys to load
-            return keyPromiseMapToPromiseContainingMap<K, V>(present);
+            return keyCompletablePromiseMapToPromiseContainingMap<K, V>(present);
         }
         if (this.multiLoader) {
             return this.getAll(keys, this.multiLoader);
@@ -166,11 +171,11 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         if (this.loader) {
             for (let key of keys) {
                 if (!present.has(key)) {
-                    present.set(key, this.get(key));
+                    present.set(key, CompletablePromise.of(this.get(key)));
                 }
             }
         }
-        return keyPromiseMapToPromiseContainingMap<K, V>(present);
+        return keyCompletablePromiseMapToPromiseContainingMap<K, V>(present);
     }
 
     ///// PUT
@@ -179,15 +184,15 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
     put(key: K, value: Promise<V>): void;
     put(key: K, value: V | Promise<V>): void {
         if (value instanceof Promise) {
-            this.cache.put(key, value as Promise<V>);
+            this.cache.put(key, CompletablePromise.of(value as Promise<V>));
         } else {
-            this.cache.put(key, Promise.resolve(value));
+            this.cache.put(key, CompletablePromise.completedPromise(Promise.resolve(value)));
         }
     }
 
     putAll(map: Map<K, V>): void {
         map.forEach((v, k) => {
-            this.cache.put(k, Promise.resolve(v));
+            this.cache.put(k, CompletablePromise.completedPromise(Promise.resolve(v)));
         })
     }
 
