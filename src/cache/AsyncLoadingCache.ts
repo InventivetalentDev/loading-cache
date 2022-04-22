@@ -137,7 +137,10 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
                     for (let key of missingKeys) {
-                        this.cache.getIfPresent(key)?.resolve(newMap.get(key));
+                        const completable = this.cache.getIfPresent(key);
+                        if (completable && !completable.resolved) {
+                            completable.resolve(newMap.get(key));
+                        }
                     }
                     // for(const [key, promise] of pendingPromises.entries()) {
                     //     const v = newMap.get(key);

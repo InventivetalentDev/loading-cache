@@ -72,6 +72,10 @@ export class CompletablePromise<T> {
         return this._promise;
     }
 
+    get resolved(): boolean {
+        return this._resolved;
+    }
+
     resolve(value?: T | PromiseLike<T>): void {
         if (this._resolved) {
             throw new Error("Promise already resolved");
