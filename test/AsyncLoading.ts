@@ -13,8 +13,8 @@ describe("AsyncLoadingCache<string, string>", function () {
         this.timeout(5);
         it("should create a new cache with options", function () {
             cache = Caches.builder()
-                .expireAfterAccess(Time.seconds(1))
-                .expireAfterWrite(Time.seconds(1))
+                .expireAfterAccess(Time.seconds(5))
+                .expireAfterWrite(Time.seconds(5))
                 .expirationInterval(Time.millis(500))
                 .buildAsync(key => new Promise<string>(resolve => {
                     setTimeout(() => {
@@ -22,8 +22,8 @@ describe("AsyncLoadingCache<string, string>", function () {
                     }, 100 + Math.random() * 100);
                 }));
             console.log(cache.options)
-            cache.options.expireAfterAccess.should.equal(1000);
-            cache.options.expireAfterWrite.should.equal(1000);
+            cache.options.expireAfterAccess.should.equal(5000);
+            cache.options.expireAfterWrite.should.equal(5000);
             cache.options.expirationInterval.should.equal(500);
             cache.options.deleteOnExpiration.should.be.true;
         });
@@ -32,6 +32,9 @@ describe("AsyncLoadingCache<string, string>", function () {
         it("should emit 'stat' events", function () {
             cache.on("stat", function (stat, amount) {
                 console.log("[stat] " + stat + " " + amount);
+            });
+            cache.on("expire", function (k, v) {
+                console.log('[expire]', k, v);
             });
         });
     });
@@ -42,46 +45,52 @@ describe("AsyncLoadingCache<string, string>", function () {
             cache.put("b", "5616148");
 
             cache.putAll(new Map<string, string>([["x", "6189749"], ["y", "1619849"]]));
+
+            console.log(cache.keys())
         });
     });
     describe("#get-present", function () {
         this.timeout(10);
-        it("should get existing entries quickly", function (done) {
+        it("should get existing entries quickly  #1", function () {
             let a = cache.getIfPresent("a"); // HIT
             a.should.be.a("Promise");
-            a.should.eventually.equal("1746161");
-
+            a.should.be.fulfilled;
+            return a.should.eventually.equal("1746161");
+        });
+        it("should get existing entries quickly #2", function () {
             let x = cache.getIfPresent("x"); // HIT
             x.should.be.a("Promise");
-            x.should.eventually.equal("6189749");
-
+            x.should.be.fulfilled;
+            return x.should.eventually.equal("6189749");
+        });
+        it("should get existing entries quickly #3", function () {
             let mapPromise = cache.getAllPresent(["b", "y"]); // 2xHIT
             mapPromise.should.be.a("Promise");
-            mapPromise.then(map => {
+            mapPromise.should.be.fulfilled;
+            return mapPromise.then(map => {
                 map.should.be.a("Map");
                 map.size.should.equal(2);
                 map.get("b").should.equal("5616148");
                 map.get("y").should.equal("1619849");
-
-                done();
             });
         });
     });
     describe("#get-sync-load", function () {
         this.timeout(10);
-        it("should get new values using sync mapping function", function () {
+        it("should get new values using sync mapping function #1", function () {
             let d = cache.get("d", k => k + "9191987");// MISS
             d.should.be.a("Promise");
-            d.should.eventually.equal("d9191987");
-
+            return d.should.eventually.equal("d9191987");
+        });
+        it("should get new values using sync mapping function #2", function () {
             let e = cache.get("e", k => k + "6519849");// MISS
             e.should.be.a("Promise");
-            e.should.eventually.equal("e6519849");
+            return e.should.eventually.equal("e6519849");
         });
     });
     describe("#get-async-load", function () {
         this.timeout(1000);
-        it("should get new values using async mapping function", function () {
+        it("should get new values using async mapping function #1", function () {
             let k = cache.get("k", k => {
                 return new Promise<string>(resolve => {
                     setTimeout(() => {
@@ -90,8 +99,9 @@ describe("AsyncLoadingCache<string, string>", function () {
                 })
             });// MISS
             k.should.be.a("Promise")
-            k.should.eventually.equal("k0641984916");
-
+            return k.should.eventually.equal("k0641984916");
+        });
+        it("should get new values using async mapping function #2", function () {
             let l = cache.get("l", k => {
                 return new Promise<string>(resolve => {
                     setTimeout(() => {
@@ -100,57 +110,99 @@ describe("AsyncLoadingCache<string, string>", function () {
                 })
             });// MISS
             l.should.be.a("Promise");
-            l.should.eventually.equal("l1784416");
+            return l.should.eventually.equal("l1784416");
         });
     });
     describe("#load", function () {
         this.timeout(2000);
-        it("should load new values from async loader", function () {
+        it("should load new values from async loader #1", function () {
             let h = cache.get("h");// MISS
             h.should.be.a("Promise");
-            h.should.eventually.equal("ha479646163796461");
-
+            return h.should.eventually.equal("ha479646163796461");
+        });
+        it("should load new values from async loader #2", function () {
             let i = cache.get("i"); // MISS
             i.should.be.a("Promise");
-            i.should.eventually.equal("ia479646163796461");
+            return i.should.eventually.equal("ia479646163796461");
+        });
+    });
+    describe("#load-after-all", function () {
+        this.timeout(2000);
+        it("should start loading after calling getAll", function () {
+            console.log(cache.keys())
+            console.log('getAll')
+            let r = cache.getAll(["o", "p", "q"]); // MISS
+            console.log(r);
+            r.should.be.a("Promise");
+            r.should.not.be.fulfilled;
+            return r.should.become(new Map([["o", "oa479646163796461"],[ "p", "pa479646163796461"], ["q", "qa479646163796461"]]));
+        });
+        it("should not load again after calling getAll #1", function () {
+            console.log('getIfPresent')
+            let b = cache.getIfPresent("o"); // HIT
+            console.log(b)
+            b.should.be.a("Promise");
+            b.should.be.fulfilled;
+            return b.should.become("oa479646163796461");
+        });
+        it("should not load again after calling getAll #2", function () {
+            console.log('get')
+            let y = cache.get("p"); // HIT
+            console.log(y)
+            y.should.be.a("Promise");
+            y.should.be.fulfilled;
+            return y.should.become("pa479646163796461");
+        });
+        it("should not load again after calling getAll #3", function () {
+            console.log('get')
+            let y = cache.get("q"); // HIT
+            console.log(y)
+            y.should.be.a("Promise");
+            y.should.be.fulfilled;
+            return y.should.become("qa479646163796461");
         });
     });
     describe("#keys", function () {
-        it("should contain 10 keys", function () {
-            cache.keys().should.eql(["a", "b", "x", "y", "d", "e", "k", "l", "h", "i"]);
+        it("should contain 13 keys", function () {
+            console.log(cache.keys())
+            cache.keys().should.eql(["a", "b", "x", "y", "d", "e", "k", "l", "h", "i", "o", "p", "q"]);
+            setTimeout(()=>{
+                console.log(cache.keys())
+            },1000)
         });
     });
     describe("#expiration", function () {
-        this.timeout(4500);
+        this.timeout(7000);
         it("should emit 'expire' event on expiration", function (done) {
             let c = 0;
             cache.on("expire", function (k, v) {
                 c++;
             });
             setTimeout(function () {
-                c.should.equal(10);
+                console.log('expired', c);
+                c.should.equal(13);
                 done();
-            }, 2000);
+            }, 6000);
         });
-        it("should expire entries after 1 second", function (done) {
+        it("should expire entries after 5 seconds", function (done) {
             setTimeout(function () {
                 cache.keys().length.should.equal(0);
                 done();
-            }, 2000);
+            }, 500);
         });
     });
     describe("#stats", function () {
         it("should count hits", function () {
-            cache.stats.get(CacheStats.HIT).should.equal(4); // excluding the loads
+            cache.stats.get(CacheStats.HIT).should.equal(7); // excluding the loads
         });
         it("should count misses", function () {
-            cache.stats.get(CacheStats.MISS).should.equal(6);
+            cache.stats.get(CacheStats.MISS).should.equal(12);
         });
         it("should count expirations", function () {
-            cache.stats.get(CacheStats.EXPIRE).should.equal(10);
+            cache.stats.get(CacheStats.EXPIRE).should.equal(13);
         });
         it("should count loads", function () {
-            cache.stats.get(CacheStats.LOAD_SUCCESS).should.equal(6);
+            cache.stats.get(CacheStats.LOAD_SUCCESS).should.equal(9);
         });
     });
 
