@@ -122,7 +122,7 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
      */
     protected getEntryIfPresent(key: K, recordStats: boolean = this.options.recordStats): Entry<K, V> | undefined {
         const entry = this.getEntryDirect(key);
-        if (!entry) {
+        if (typeof entry === "undefined") {
             if (recordStats) {
                 this.stats.inc(CacheStats.MISS);
             }

@@ -18,7 +18,7 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
 
     getIfPresent(key: K): V | undefined {
         const entry = this.getEntryIfPresent(key);
-        if (!entry) {
+        if (typeof entry === "undefined") {
             return undefined;
         }
         return entry.getValue();
@@ -61,7 +61,7 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
         const map = new Map<K, Entry<K, V>>();
         for (let key of keys) {
             let val = this.getEntryIfPresent(key);
-            if (val) {
+            if (typeof val !== "undefined") {
                 map.set(key, val);
             }
         }
@@ -105,7 +105,7 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
 
     put(key: K, value: V): void {
         let entry = this.getEntryIfPresent(key, false);
-        if (!entry) {
+        if (typeof entry === "undefined") {
             // create new entry
             entry = new Entry<K, V>(key)
         }
