@@ -124,7 +124,9 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                 let pendingPromises: Map<K, CompletablePromise<V>> = new Map();
                 for (let key of missingKeys) {
                     let promise = new CompletablePromise<V>();
-                    this.put(key, promise.promise);
+                    if (!this.has(key)) {
+                        this.put(key, promise.promise);
+                    }
                     pendingPromises.set(key, promise);
                 }
 
@@ -133,7 +135,10 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
                     mappedPromise
                 ]).then(([presentMap, newMap]) => {
                     for (let [key, promise] of pendingPromises) {
-                        promise.resolve(newMap.get(key));
+                        const v = newMap.get(key);
+                        if (v) {
+                            promise.resolve(v);
+                        }
                     }
                     this.putAll(newMap);
 
