@@ -109,39 +109,41 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
     _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
         const keyArray = asArray<K>(keys);
         const present = this.cache.getAllPresent(keys);
-        if (mappingFunction && present.size < keyArray.length) {
-            const missingKeys = keyArray.filter(k => !present.has(k));
-            if (missingKeys.length > 0) {
-                const mapped: Map<K, V> | Promise<Map<K, V>> = mappingFunction(keys);
-                let mappedPromise: Promise<Map<K, V>>;
-                if (mapped instanceof Promise) {
-                    mappedPromise = mapped as Promise<Map<K, V>>;
-                } else {
-                    mappedPromise = Promise.resolve(mapped);
-                }
+        if (mappingFunction) {
+            if (present.size < keyArray.length) {
+                const missingKeys = keyArray.filter(k => !present.has(k));
+                if (missingKeys.length > 0) {
+                    const mapped: Map<K, V> | Promise<Map<K, V>> = mappingFunction(keys);
+                    let mappedPromise: Promise<Map<K, V>>;
+                    if (mapped instanceof Promise) {
+                        mappedPromise = mapped as Promise<Map<K, V>>;
+                    } else {
+                        mappedPromise = Promise.resolve(mapped);
+                    }
 
-                // populate cache with pending promises to mark them as loading
-                for (let key of missingKeys) {
-                    this.cache.put(key, new CompletablePromise<V>());
-                }
-
-                return Promise.all([
-                    keyCompletablePromiseMapToPromiseContainingMap<K, V>(present),
-                    mappedPromise
-                ]).then(([presentMap, newMap]) => {
+                    // populate cache with pending promises to mark them as loading
                     for (let key of missingKeys) {
-                        this.cache.getIfPresent(key)?.resolve(newMap.get(key));
+                        this.cache.put(key, new CompletablePromise<V>());
                     }
 
-                    const combined = new Map<K, V>();
-                    presentMap.forEach((v, k) => combined.set(k, v));
-                    newMap.forEach((v, k) => combined.set(k, v));
-                    if (this.options.recordStats) {
-                        this.stats.inc(CacheStats.LOAD_SUCCESS, newMap.size);
-                        this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - newMap.size);
-                    }
-                    return combined;
-                })
+                    return Promise.all([
+                        keyCompletablePromiseMapToPromiseContainingMap<K, V>(present),
+                        mappedPromise
+                    ]).then(([presentMap, newMap]) => {
+                        for (let key of missingKeys) {
+                            this.cache.getIfPresent(key)?.resolve(newMap.get(key));
+                        }
+
+                        const combined = new Map<K, V>();
+                        presentMap.forEach((v, k) => combined.set(k, v));
+                        newMap.forEach((v, k) => combined.set(k, v));
+                        if (this.options.recordStats) {
+                            this.stats.inc(CacheStats.LOAD_SUCCESS, newMap.size);
+                            this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - newMap.size);
+                        }
+                        return combined;
+                    })
+                }
             }
 
             // no missing keys to load
