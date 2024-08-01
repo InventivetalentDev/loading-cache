@@ -1,7 +1,7 @@
 {
-  "inputFiles": ["src"],
-  "out": "docs",
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
   "excludePrivate": true,
-  "excludeProtected": true,
-  "stripInternal": true
+  "excludeInternal": true,
+  "out": "./docs"
 }
