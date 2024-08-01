@@ -4,17 +4,15 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "module": "ES6",
-    "target": "ES6",
+    "esModuleInterop": true,
+    "module": "ES2020",
+    "target": "ES2020",
     "moduleResolution": "Node",
     "outDir": "dist/esm",
     "sourceMap": true,
     "lib": [
       "es6",
       "dom"
-    ],
-    "typeRoots": [
-      "node_modules/@types"
     ],
     "types": [
       "node",
@@ -24,6 +22,7 @@
     "baseUrl": "."
   },
   "include": [
-    "./src"
+    "src/**/*",
+    "test/**/*"
   ]
 }
