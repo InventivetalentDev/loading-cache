@@ -58,7 +58,7 @@
     "doc": "typedoc --out docs src"
   },
   "dependencies": {
-    "@inventivetalent/time": "^1.0.3"
+    "@inventivetalent/time": "^1.0.4"
   },
   "devDependencies": {
     "@types/chai": "^4.3.17",
