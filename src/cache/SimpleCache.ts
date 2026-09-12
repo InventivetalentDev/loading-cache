@@ -150,7 +150,9 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
     invalidateAll(keys: Iterable<K>): void;
     invalidateAll(keys?: Iterable<K>): void {
         if (!keys) {
-            keys = this.keys();
+            // allKeys rather than keys, so expired-but-not-yet-swept entries are
+            // dropped too instead of surviving an invalidateAll()
+            keys = this.allKeys();
         }
         for (let key of keys) {
             this.invalidate(key);

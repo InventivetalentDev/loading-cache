@@ -167,12 +167,31 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
 
     /////
 
-    keys(): Array<K> {
+    /**
+     * Every stored key, including entries that have expired but not been swept yet.<br/>
+     * For internal bookkeeping - {@link keys} is the public, expiration-aware view.
+     */
+    protected allKeys(): Array<K> {
         return asArray(this.data.keys());
     }
 
+    keys(): Array<K> {
+        const keys: Array<K> = [];
+        this.data.forEach((entry, key) => {
+            // Expired entries are not retrievable, so they must not be listed either -
+            // they can linger here until the cleanup sweep (or forever, with
+            // deleteOnExpiration disabled)
+            if (!entry.isExpired(this.options)) {
+                keys.push(key);
+            }
+        });
+        return keys;
+    }
+
     has(key: K): boolean {
-        return this.data.has(key);
+        const entry = this.data.get(key);
+        // Checked against expiration so has() can never disagree with getIfPresent()
+        return typeof entry !== "undefined" && !entry.isExpired(this.options);
     }
 
     end(): void {

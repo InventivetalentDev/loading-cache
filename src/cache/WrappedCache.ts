@@ -63,6 +63,16 @@ export class WrappedCache<K, V> extends SimpleCache<K, V> {
     }
 
     /**
+     * Checks the wrapped store as well, so an entry that was persisted but not read back
+     * into memory yet isn't reported as missing.<br/>
+     * Note that {@link keys} can only list in-memory entries - the wrapped store has no
+     * enumeration function.
+     */
+    has(key: K): boolean {
+        return super.has(key) || typeof this.getEntryIfPresent(key, false) !== "undefined";
+    }
+
+    /**
      * Key as used in the wrapped store.<br/>
      * Kept as JSON so previously persisted entries stay readable.
      */

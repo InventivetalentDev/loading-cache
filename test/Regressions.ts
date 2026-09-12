@@ -234,11 +234,153 @@ describe("regressions", function () {
             cache.end();
         });
 
+        it("should report persisted entries from has() after a restart", function () {
+            const store = new Map<string, string>();
+            const make = () => new WrappedCache<string, string>({ expirationInterval: 0 },
+                k => store.has(k) ? store.get(k) : null,
+                (k, v) => void store.set(k, v),
+                k => store.delete(k),
+                () => store.clear());
+
+            const first = make();
+            first.put("a", "persisted");
+            first.end();
+
+            // fresh instance: nothing in memory, entry still in the wrapped store
+            const restarted = make();
+            restarted.has("a").should.be.true;
+            expect(restarted.getIfPresent("a")).to.equal("persisted");
+            restarted.end();
+        });
+
+        it("should not report expired persisted entries from has()", async function () {
+            const store = new Map<string, string>();
+            const make = () => new WrappedCache<string, string>(
+                { expirationInterval: 0, expireAfterWrite: Time.millis(30) },
+                k => store.has(k) ? store.get(k) : null,
+                (k, v) => void store.set(k, v),
+                k => store.delete(k),
+                () => store.clear());
+
+            const first = make();
+            first.put("a", "persisted");
+            first.end();
+            await new Promise(resolve => setTimeout(resolve, 60));
+
+            const restarted = make();
+            restarted.has("a").should.be.false;
+            expect(restarted.getIfPresent("a")).to.be.undefined;
+            restarted.end();
+        });
+
         it("should survive corrupt data in the backing store", function () {
             const { store, cache } = wrapped();
             store.set(JSON.stringify("bad"), "{not json");
             expect(cache.getIfPresent("bad")).to.be.undefined;
             cache.end();
+        });
+    });
+
+    describe("expiration visibility", function () {
+        // deleteOnExpiration:false keeps expired entries in memory, which is the case
+        // where has()/keys() can disagree with getIfPresent()
+        function lingering() {
+            return Caches.builder()
+                .expireAfterWrite(Time.millis(30))
+                .deleteOnExpiration(false)
+                .expirationInterval(0)
+                .build<string, string>();
+        }
+
+        it("should not report expired entries from has()", async function () {
+            const cache = lingering();
+            cache.put("a", "1");
+            cache.has("a").should.be.true;
+            await new Promise(resolve => setTimeout(resolve, 60));
+            expect(cache.getIfPresent("a")).to.be.undefined;
+            cache.has("a").should.be.false;
+            cache.end();
+        });
+
+        it("should not list expired entries in keys()", async function () {
+            const cache = lingering();
+            cache.put("a", "1");
+            cache.put("b", "2");
+            cache.keys().should.have.members(["a", "b"]);
+            await new Promise(resolve => setTimeout(resolve, 60));
+            cache.keys().should.be.empty;
+            cache.end();
+        });
+
+        it("should keep has() and keys() consistent with getIfPresent()", async function () {
+            const cache = lingering();
+            cache.put("old", "1");
+            await new Promise(resolve => setTimeout(resolve, 60));
+            cache.put("new", "2");
+            cache.keys().should.eql(["new"]);
+            cache.has("new").should.be.true;
+            cache.has("old").should.be.false;
+            expect(cache.getIfPresent("new")).to.equal("2");
+            expect(cache.getIfPresent("old")).to.be.undefined;
+            cache.end();
+        });
+
+        it("should still drop expired entries on invalidateAll()", async function () {
+            // allKeys() is protected, so reach it through a subclass to check the
+            // underlying map rather than the filtered view
+            class Probe extends SimpleCache<string, string> {
+                stored(): string[] {
+                    return this.allKeys();
+                }
+            }
+            const cache = new Probe({
+                expireAfterWrite: Time.millis(30),
+                deleteOnExpiration: false,
+                expirationInterval: 0
+            });
+            cache.put("a", "1");
+            cache.put("b", "2");
+            await new Promise(resolve => setTimeout(resolve, 60));
+            cache.stored().should.have.members(["a", "b"]);
+            cache.invalidateAll();
+            cache.stored().should.be.empty;
+            cache.end();
+        });
+
+        it("should not record stats or extend entry lifetime", async function () {
+            const cache = Caches.builder()
+                .expireAfterAccess(Time.millis(60))
+                .expirationInterval(0)
+                .build<string, string>();
+            cache.put("a", "1");
+            // repeated has()/keys() must not keep the entry alive
+            for (let i = 0; i < 4; i++) {
+                cache.has("a");
+                cache.keys();
+                await new Promise(resolve => setTimeout(resolve, 25));
+            }
+            cache.has("a").should.be.false;
+            cache.stats.get(CacheStats.HIT).should.equal(0);
+            cache.stats.get(CacheStats.MISS).should.equal(0);
+            cache.end();
+        });
+
+        it("should apply to LoadingCache and AsyncLoadingCache too", async function () {
+            const loading = Caches.builder()
+                .expireAfterWrite(Time.millis(30)).deleteOnExpiration(false).expirationInterval(0)
+                .build<string, string>(k => k);
+            const async = Caches.builder()
+                .expireAfterWrite(Time.millis(30)).deleteOnExpiration(false).expirationInterval(0)
+                .buildAsync<string, string>(async k => k);
+            loading.put("a", "1");
+            async.put("a", "1");
+            await new Promise(resolve => setTimeout(resolve, 60));
+            loading.has("a").should.be.false;
+            loading.keys().should.be.empty;
+            async.has("a").should.be.false;
+            async.keys().should.be.empty;
+            loading.end();
+            async.end();
         });
     });
 
