@@ -2,7 +2,7 @@ import { CacheBase, Entry, Options } from "./CacheBase";
 import { MappingFunction } from "../loaders";
 import { ICache } from "../interfaces/ICache";
 import { CacheStats } from "../CacheStats";
-import { asArray } from "../util";
+import { asArray, isValue } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 /**
@@ -29,6 +29,19 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
     }
 
     /**
+     * Get a value without recording stats, refreshing the access time or expiring the entry
+     * @param key key to peek at
+     * @return the mapped value or <code>undefined</code> if absent or expired
+     */
+    peek(key: K): V | undefined {
+        const entry = this.getEntryDirect(key);
+        if (typeof entry === "undefined" || entry.isExpired(this.options)) {
+            return undefined;
+        }
+        return entry.peekValue();
+    }
+
+    /**
      * @internal
      */
     _get(key: K, mappingFunction: MappingFunction<K, V>, forceLoad: boolean = false): V | undefined {
@@ -40,11 +53,13 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
         }
         if (mappingFunction) {
             const mapped = mappingFunction(key);
-            if (mapped) {
+            // Only a missing value counts as a failed load - falsy values like 0, "" or false are cacheable
+            const loaded = isValue(mapped);
+            if (loaded) {
                 this.put(key, mapped);
             }
             if (this.options.recordStats) {
-                if (mapped) {
+                if (loaded) {
                     this.stats.inc(CacheStats.LOAD_SUCCESS)
                 } else {
                     this.stats.inc(CacheStats.LOAD_FAIL);
@@ -83,7 +98,8 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
         const keyArray = asArray(keys);
         const present = this.getAllPresent(keys);
         if (mappingFunction && present.size < keyArray.length) {
-            const missingKeys = keyArray.filter(k => !present.has(k));
+            // Deduplicated, so a repeated key isn't loaded (or counted) twice
+            const missingKeys = asArray(new Set(keyArray.filter(k => !present.has(k))));
             if (missingKeys.length > 0) {
                 const mapped = mappingFunction(missingKeys);
                 this.putAll(mapped);
@@ -92,8 +108,11 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
                 present.forEach((v, k) => combined.set(k, v));
                 mapped.forEach((v, k) => combined.set(k, v));
                 if (this.options.recordStats) {
-                    this.stats.inc(CacheStats.LOAD_SUCCESS, mapped.size);
-                    this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - mapped.size);
+                    // Count against the requested keys only, so a loader returning extra
+                    // entries can't push the failure count negative
+                    const loadedCount = missingKeys.filter(k => mapped.has(k)).length;
+                    this.stats.inc(CacheStats.LOAD_SUCCESS, loadedCount);
+                    this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length - loadedCount);
                 }
                 return combined;
             }
@@ -122,7 +141,9 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
     ///// INVALIDATE
 
     invalidate(key: K) {
-        super.invalidateEntry(key);
+        // this. rather than super. so subclasses (e.g. WrappedCache) can clean up their
+        // backing store - otherwise invalidated entries would be orphaned there
+        this.invalidateEntry(key);
     }
 
     invalidateAll(): void;

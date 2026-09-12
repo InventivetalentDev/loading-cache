@@ -9,6 +9,8 @@ should();
 
 describe("AsyncLoadingCache<string, string>", function () {
     let cache: AsyncLoadingCache<string, string>;
+    const expiredKeys: string[] = [];
+    let allExpired: Promise<void>;
     describe("#init", function () {
         this.timeout(5);
         it("should create a new cache with options", function () {
@@ -35,6 +37,16 @@ describe("AsyncLoadingCache<string, string>", function () {
             });
             cache.on("expire", function (k, v) {
                 console.log('[expire]', k, v);
+            });
+        });
+        it("should register the 'expire' listener before anything can expire", function () {
+            allExpired = new Promise<void>(resolve => {
+                cache.on("expire", function (k, v) {
+                    expiredKeys.push(k);
+                    if (expiredKeys.length >= 13) {
+                        resolve();
+                    }
+                });
             });
         });
     });
@@ -214,23 +226,16 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#expiration", function () {
-        this.timeout(7000);
-        it("should emit 'expire' event on expiration", function (done) {
-            let c = 0;
-            cache.on("expire", function (k, v) {
-                c++;
+        this.timeout(12000);
+        // Waiting for the events rather than asserting at a fixed deadline - the assertion
+        // would otherwise race the cache's own cleanup interval
+        it("should emit 'expire' event on expiration", function () {
+            return allExpired.then(() => {
+                expiredKeys.should.have.members(["a", "b", "x", "y", "d", "e", "k", "l", "h", "i", "o", "p", "q"]);
             });
-            setTimeout(function () {
-                console.log('expired', c);
-                c.should.equal(13);
-                done();
-            }, 6000);
         });
-        it("should expire entries after 5 seconds", function (done) {
-            setTimeout(function () {
-                cache.keys().length.should.equal(0);
-                done();
-            }, 500);
+        it("should expire entries after 5 seconds", function () {
+            cache.keys().length.should.equal(0);
         });
     });
     describe("#stats", function () {

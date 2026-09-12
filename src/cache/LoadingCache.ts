@@ -57,7 +57,8 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
     _get(key: K, mappingFunction?: MappingFunction<K, V>, forceLoad: boolean = false): V | undefined {
         if (!forceLoad) {
             const present = this.getIfPresent(key);
-            if (present) {
+            // typeof check so cached falsy values like 0, "" or false don't trigger a reload
+            if (typeof present !== "undefined") {
                 return present;
             }
         }
@@ -96,7 +97,11 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
         if (this.loader) {
             for (let key of keys) {
                 if (!present.has(key)) {
-                    present.set(key, this.get(key, this.loader));
+                    const loaded = this.get(key, this.loader);
+                    // Undefined values are not returned, matching getAllPresent
+                    if (typeof loaded !== "undefined") {
+                        present.set(key, loaded);
+                    }
                 }
             }
         }

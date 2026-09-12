@@ -57,7 +57,7 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
     private readonly data: Map<K, Entry<K, V>> = new Map<K, Entry<K, V>>();
     private readonly _stats: CacheStats = new CacheStats();
     private readonly _options: Options;
-    private _cleanupTimeout: NodeJS.Timeout;
+    private _cleanupTimeout: ReturnType<typeof setTimeout>;
 
     protected constructor(options?: Options) {
         super({});
@@ -82,6 +82,10 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
             this.deleteExpiredEntries();
             if (this.options.expirationInterval > 0) {
                 this._cleanupTimeout = setTimeout(() => this.runCleanup(), this.options.expirationInterval);
+                // Don't keep the process alive just for the cleanup timer
+                if (typeof (this._cleanupTimeout as any)?.unref === "function") {
+                    (this._cleanupTimeout as any).unref();
+                }
             }
         }
     }
@@ -91,18 +95,21 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
     }
 
     protected deleteExpiredEntries(recordStats: boolean = this.options.recordStats): void {
-        const toDelete: K[] = [];
+        const toDelete: Entry<K, V>[] = [];
         this.data.forEach(entry => {
             if (entry.isExpired(this.options)) {
-                toDelete.push(entry.getKey());
-                try {
-                    this.emit(CacheEvents.EXPIRE, entry.getKey(), entry.getValue());
-                } catch (e) {
-                    console.error(e);
-                }
+                toDelete.push(entry);
             }
         });
-        toDelete.forEach(k => this.data.delete(k));
+        toDelete.forEach(entry => {
+            // Route through invalidateEntry so subclasses can clean up backing stores
+            this.invalidateEntry(entry.peekKey());
+            try {
+                this.emit(CacheEvents.EXPIRE, entry.peekKey(), entry.peekValue());
+            } catch (e) {
+                console.error(e);
+            }
+        });
         if (recordStats) {
             this.stats.inc(CacheStats.EXPIRE, toDelete.length);
         }
@@ -194,8 +201,22 @@ export class Entry<K, V> {
         return entry;
     }
 
+    /**
+     * Get the key without counting it as an access
+     */
+    peekKey(): K {
+        return this.key;
+    }
+
+    /**
+     * Get the value without counting it as an access
+     */
+    peekValue(): V {
+        return this.value;
+    }
+
     getKey(): K {
-        this.accessTime = Time.now
+        this.accessTime = Time.now;
         return this.key;
     }
 
@@ -210,13 +231,14 @@ export class Entry<K, V> {
         return this.value = v;
     }
 
-    isExpired(options: Options) {
-        if (options.expireAfterAccess !== 0) {
+    isExpired(options: Options): boolean {
+        // > 0 rather than !== 0 so an explicitly undefined option can't disable expiration silently
+        if (options.expireAfterAccess > 0) {
             if (Time.now - this.accessTime > options.expireAfterAccess) {
                 return true;
             }
         }
-        if (options.expireAfterWrite !== 0) {
+        if (options.expireAfterWrite > 0) {
             if (Time.now - this.writeTime > options.expireAfterWrite) {
                 return true;
             }

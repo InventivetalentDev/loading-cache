@@ -34,7 +34,15 @@ export class CacheStats extends EventEmitter {
         this.map.clear();
     }
 
+    /**
+     * All recorded stats as a plain object
+     */
+    toObject(): Record<string, number> {
+        return Object.fromEntries(this.map);
+    }
+
     public toString(): string {
-        return JSON.stringify(this.map, null, 2);
+        // JSON.stringify on a Map yields "{}", so the entries have to be converted first
+        return JSON.stringify(this.toObject(), null, 2);
     }
 }

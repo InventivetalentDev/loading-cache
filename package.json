@@ -5,7 +5,20 @@
   "license": "MIT",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
-  "types": "dist/cjs/index",
+  "types": "dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist/"
   ],
@@ -39,9 +52,9 @@
   ],
   "scripts": {
     "clean": "rm -rf dist",
-    "test": "mocha -r test/mocha.env -r ts-node/register test/**.ts",
-    "compile": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json",
-    "build": "yarn run compile",
+    "test": "mocha -r test/mocha.env -r ts-node/register \"test/**/*.ts\"",
+    "compile": "tsc -p tsconfig.json && tsc -p tsconfig-cjs.json && node scripts/fixup-dist.js",
+    "build": "yarn run clean && yarn run compile",
     "doc": "typedoc --out docs src"
   },
   "dependencies": {
