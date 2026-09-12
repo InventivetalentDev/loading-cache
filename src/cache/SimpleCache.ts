@@ -1,5 +1,5 @@
 import { CacheBase, Entry, Options } from "./CacheBase";
-import { MappingFunction } from "../loaders";
+import { MappingFunction, MultiMappingFunction } from "../loaders";
 import { ICache } from "../interfaces/ICache";
 import { CacheStats } from "../CacheStats";
 import { asArray, isValue } from "../util";
@@ -94,7 +94,7 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
         return map;
     }
 
-    getAll(keys: Iterable<K>, mappingFunction: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V> {
+    getAll(keys: Iterable<K>, mappingFunction: MultiMappingFunction<K, V>): Map<K, V> {
         const keyArray = asArray(keys);
         const present = this.getAllPresent(keys);
         if (mappingFunction && present.size < keyArray.length) {
@@ -102,6 +102,13 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
             const missingKeys = asArray(new Set(keyArray.filter(k => !present.has(k))));
             if (missingKeys.length > 0) {
                 const mapped = mappingFunction(missingKeys);
+                if (typeof mapped === "undefined") {
+                    // The mapping function produced nothing at all
+                    if (this.options.recordStats) {
+                        this.stats.inc(CacheStats.LOAD_FAIL, missingKeys.length);
+                    }
+                    return present;
+                }
                 this.putAll(mapped);
 
                 const combined = new Map<K, V>();
@@ -159,7 +166,7 @@ export class SimpleCache<K, V> extends CacheBase<K, V> implements ICache<K, V>, 
         }
     }
 
-    refresh(key: K): V {
+    refresh(key: K): V | undefined {
         // Don't really have a way to properly refresh in SimpleCache
         return this.getIfPresent(key);
     }

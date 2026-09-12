@@ -1,4 +1,4 @@
-import { AsyncMappingFunction, MappingFunction } from "../loaders";
+import { AsyncMultiMappingFunction, MappingFunction, AsyncMappingFunction, MultiMappingFunction } from "../loaders";
 import { ICacheBase } from "./ICacheBase";
 
 export interface IAsyncCache<K, V> extends ICacheBase<K, V> {
@@ -13,17 +13,17 @@ export interface IAsyncCache<K, V> extends ICacheBase<K, V> {
      * Get a value mapped by the key, optionally retrieving it from the mapping function
      * @param key key to get
      * @param mappingFunction function to get a value from in case the stored value doesn't exist
-     * @return promise of the mapped value or the retrieved value
+     * @return promise of the mapped value, the retrieved value or <code>undefined</code>
      */
-    get(key: K, mappingFunction: MappingFunction<K, V>): Promise<V>;
+    get(key: K, mappingFunction: MappingFunction<K, V>): Promise<V | undefined>;
 
     /**
      * Get a value mapped by the key, optionally retrieving it from the mapping function
      * @param key key to get
      * @param mappingFunction function to get a value from in case the stored value doesn't exist
-     * @return promise of the mapped value or the retrieved value
+     * @return promise of the mapped value, the retrieved value or <code>undefined</code>
      */
-    get(key: K, mappingFunction: AsyncMappingFunction<K, V>): Promise<V>;
+    get(key: K, mappingFunction: AsyncMappingFunction<K, V>): Promise<V | undefined>;
 
     /**
      * Get all values by keys. Undefined values are not returned
@@ -38,7 +38,7 @@ export interface IAsyncCache<K, V> extends ICacheBase<K, V> {
      * @param mappingFunction function to get values for keys which do not exist
      * @return map of key -> value
      */
-    getAll(keys: Iterable<K>, mappingFunction: MappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction: MultiMappingFunction<K, V>): Promise<Map<K, V>>;
 
     /**
      * Get all values by keys, optionally retrieving them from the mapping function
@@ -46,7 +46,7 @@ export interface IAsyncCache<K, V> extends ICacheBase<K, V> {
      * @param mappingFunction function to get values for keys which do not exist
      * @return map of key -> value
      */
-    getAll(keys: Iterable<K>, mappingFunction: AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction: AsyncMultiMappingFunction<K, V>): Promise<Map<K, V>>;
 
     /**
      * Add a key->value pair to the cache, replacing any previous value mapped by the key
@@ -70,6 +70,7 @@ export interface IAsyncCache<K, V> extends ICacheBase<K, V> {
 
     /**
      * Force-refresh a key's value
+     * @return promise of the reloaded value, or <code>undefined</code> if nothing could be loaded
      */
-    refresh(key: K): Promise<V>;
+    refresh(key: K): Promise<V | undefined>;
 }

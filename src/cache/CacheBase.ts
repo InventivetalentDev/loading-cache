@@ -5,7 +5,12 @@ import { asArray } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 import { Time } from "@inventivetalent/time";
 
-const DEFAULT_OPTIONS: Options = {
+/**
+ * {@link Options} after the defaults have been applied - every field is set
+ */
+export type ResolvedOptions = Required<Options>;
+
+const DEFAULT_OPTIONS: ResolvedOptions = {
     expireAfterAccess: 0,
     expireAfterWrite: 0,
     deleteOnExpiration: true,
@@ -50,18 +55,32 @@ export interface Options {
 }
 
 /**
+ * Apply the defaults. Fields explicitly set to <code>undefined</code> fall back to the
+ * default rather than unsetting it.
+ */
+function resolveOptions(options: Options = {}): ResolvedOptions {
+    return {
+        expireAfterAccess: options.expireAfterAccess ?? DEFAULT_OPTIONS.expireAfterAccess,
+        expireAfterWrite: options.expireAfterWrite ?? DEFAULT_OPTIONS.expireAfterWrite,
+        deleteOnExpiration: options.deleteOnExpiration ?? DEFAULT_OPTIONS.deleteOnExpiration,
+        expirationInterval: options.expirationInterval ?? DEFAULT_OPTIONS.expirationInterval,
+        recordStats: options.recordStats ?? DEFAULT_OPTIONS.recordStats
+    };
+}
+
+/**
  * Base class for all cache implementations
  */
 export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEventEmitter {
 
     private readonly data: Map<K, Entry<K, V>> = new Map<K, Entry<K, V>>();
     private readonly _stats: CacheStats = new CacheStats();
-    private readonly _options: Options;
-    private _cleanupTimeout: ReturnType<typeof setTimeout>;
+    private readonly _options: ResolvedOptions;
+    private _cleanupTimeout: ReturnType<typeof setTimeout> | undefined;
 
     protected constructor(options?: Options) {
         super({});
-        this._options = { ...DEFAULT_OPTIONS, ...options };
+        this._options = resolveOptions(options);
 
         // Start cleanup task if enabled
         this.runCleanup();
@@ -69,7 +88,7 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
         CacheEvents.forward(this._stats, this);
     }
 
-    get options(): Options {
+    get options(): ResolvedOptions {
         return this._options;
     }
 
@@ -91,7 +110,10 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
     }
 
     protected stopCleanupTimer() {
-        clearTimeout(this._cleanupTimeout);
+        if (typeof this._cleanupTimeout !== "undefined") {
+            clearTimeout(this._cleanupTimeout);
+            this._cleanupTimeout = undefined;
+        }
     }
 
     protected deleteExpiredEntries(recordStats: boolean = this.options.recordStats): void {
@@ -203,13 +225,16 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
 
 export class Entry<K, V> {
     protected readonly key: K;
-    protected value: V;
+    // Always assigned right after construction, through setValue or fromJson
+    protected value!: V;
 
     protected accessTime: number;
     protected writeTime: number;
 
     constructor(key: K) {
         this.key = key;
+        this.accessTime = Time.now;
+        this.writeTime = Time.now;
     }
 
     static fromJson<K, V>(key: any, value: any): Entry<K, V> {
@@ -251,16 +276,14 @@ export class Entry<K, V> {
     }
 
     isExpired(options: Options): boolean {
-        // > 0 rather than !== 0 so an explicitly undefined option can't disable expiration silently
-        if (options.expireAfterAccess > 0) {
-            if (Time.now - this.accessTime > options.expireAfterAccess) {
-                return true;
-            }
+        // Defaulted locally so a plain Options with missing fields never expires by accident
+        const expireAfterAccess = options.expireAfterAccess ?? 0;
+        const expireAfterWrite = options.expireAfterWrite ?? 0;
+        if (expireAfterAccess > 0 && Time.now - this.accessTime > expireAfterAccess) {
+            return true;
         }
-        if (options.expireAfterWrite > 0) {
-            if (Time.now - this.writeTime > options.expireAfterWrite) {
-                return true;
-            }
+        if (expireAfterWrite > 0 && Time.now - this.writeTime > expireAfterWrite) {
+            return true;
         }
         return false;
     }

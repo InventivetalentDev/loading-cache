@@ -7,6 +7,14 @@ import { Time } from "@inventivetalent/time";
 chai.use(chaiAsPromised);
 should();
 
+/**
+ * Asserts the value is there and narrows it, so strict-mode tests can keep chaining
+ */
+function present<T>(value: T | undefined): T {
+    chai.expect(value, "expected a value to be present").to.not.be.undefined;
+    return value as T;
+}
+
 describe("AsyncLoadingCache<string, string>", function () {
     let cache: AsyncLoadingCache<string, string>;
     const expiredKeys: string[] = [];
@@ -64,7 +72,7 @@ describe("AsyncLoadingCache<string, string>", function () {
     describe("#get-present", function () {
         this.timeout(10);
         it("should get existing entries quickly  #1", function () {
-            let a = cache.getIfPresent("a"); // HIT
+            let a = present(cache.getIfPresent("a")); // HIT
             a.should.be.a("Promise");
             return Promise.all([
                 a.should.be.fulfilled,
@@ -72,7 +80,7 @@ describe("AsyncLoadingCache<string, string>", function () {
             ])
         });
         it("should get existing entries quickly #2", function () {
-            let x = cache.getIfPresent("x"); // HIT
+            let x = present(cache.getIfPresent("x")); // HIT
             x.should.be.a("Promise");
             return Promise.all([
                 x.should.be.fulfilled,
@@ -87,8 +95,8 @@ describe("AsyncLoadingCache<string, string>", function () {
                 mapPromise.then(map => {
                     map.should.be.a("Map");
                     map.size.should.equal(2);
-                    map.get("b").should.equal("5616148");
-                    map.get("y").should.equal("1619849");
+                    present(map.get("b")).should.equal("5616148");
+                    present(map.get("y")).should.equal("1619849");
                 })
             ])
         });
@@ -185,7 +193,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         it("should not load again after calling getAll #1", function () {
             this.timeout(10)
             console.log('getIfPresent')
-            let b = cache.getIfPresent("o"); // HIT
+            let b = present(cache.getIfPresent("o")); // HIT
             console.log(b)
             b.should.be.a("Promise");
             return Promise.all([

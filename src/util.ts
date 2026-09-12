@@ -5,24 +5,36 @@ export function asArray<K>(iterable: Iterable<K>): Array<K> {
     return Array.from(iterable);
 }
 
-export function keyCompletablePromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K, CompletablePromise<V>>): Promise<Map<K, V>> {
+export function keyCompletablePromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K, CompletablePromise<V | undefined>>): Promise<Map<K, V>> {
     const keys = asArray(keyToPromiseMap.keys());
     const values = asArray(keyToPromiseMap.values());
     return Promise.all(values.map(p => p.promise)).then(resolvedValues => {
         const valueMap = new Map<K, V>();
         // Map iteration order is insertion order, so keys and values line up
-        keys.forEach((key, i) => valueMap.set(key, resolvedValues[i]));
+        keys.forEach((key, i) => {
+            const value = resolvedValues[i];
+            // Undefined values are not returned
+            if (typeof value !== "undefined") {
+                valueMap.set(key, value);
+            }
+        });
         return valueMap;
     });
 }
 
-export function keyPromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K, Promise<V>>): Promise<Map<K, V>> {
+export function keyPromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K, Promise<V | undefined>>): Promise<Map<K, V>> {
     const keys = asArray(keyToPromiseMap.keys());
     const values = asArray(keyToPromiseMap.values());
     return Promise.all(values).then(resolvedValues => {
         const valueMap = new Map<K, V>();
         // Map iteration order is insertion order, so keys and values line up
-        keys.forEach((key, i) => valueMap.set(key, resolvedValues[i]));
+        keys.forEach((key, i) => {
+            const value = resolvedValues[i];
+            // Undefined values are not returned
+            if (typeof value !== "undefined") {
+                valueMap.set(key, value);
+            }
+        });
         return valueMap;
     });
 }
@@ -30,8 +42,9 @@ export function keyPromiseMapToPromiseContainingMap<K, V>(keyToPromiseMap: Map<K
 export class CompletablePromise<T> {
 
     private readonly _promise: Promise<T>;
-    private _resolve: (value?: T | PromiseLike<T>) => void;
-    private _reject: (reason?: any) => void;
+    // Assigned synchronously by the Promise executor, which TypeScript can't see
+    private _resolve!: (value: T | PromiseLike<T>) => void;
+    private _reject!: (reason?: any) => void;
 
     private _settled = false;
 
@@ -80,7 +93,9 @@ export class CompletablePromise<T> {
             return;
         }
         this._settled = true;
-        this._resolve(value);
+        // Resolving without a value yields a promise of undefined; the executor's resolve
+        // is typed as requiring one, so the optional argument is passed through as-is
+        this._resolve(value as T | PromiseLike<T>);
     }
 
     reject(reason?: any): void {

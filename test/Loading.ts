@@ -7,6 +7,14 @@ import { Time } from "@inventivetalent/time";
 chai.use(chaiAsPromised);
 should();
 
+/**
+ * Asserts the value is there and narrows it, so strict-mode tests can keep chaining
+ */
+function present<T>(value: T | undefined): T {
+    chai.expect(value, "expected a value to be present").to.not.be.undefined;
+    return value as T;
+}
+
 describe("LoadingCache<string, string>", function () {
     let cache: LoadingCache<string, string>;
     const expiredKeys: string[] = [];
@@ -54,25 +62,25 @@ describe("LoadingCache<string, string>", function () {
     describe("#get", function () {
         this.timeout(10);
         it("should get existing entries", function () {
-            cache.getIfPresent("a").should.equal("12345"); // HIT
-            cache.getIfPresent("x").should.equal("61689646"); // HIT
+            present(cache.getIfPresent("a")).should.equal("12345"); // HIT
+            present(cache.getIfPresent("x")).should.equal("61689646"); // HIT
 
             let map = cache.getAllPresent(["b", "y"]); // 2xHIT
             map.should.be.a("Map");
             map.size.should.equal(2);
-            map.get("b").should.equal("5134676");
-            map.get("y").should.equal("14946");
+            present(map.get("b")).should.equal("5134676");
+            present(map.get("y")).should.equal("14946");
         });
         it("should get new values using mapping function", function () {
-            cache.get("d", k => k + "494161").should.equal("d494161"); // MISS
-            cache.get("e", k => k + "196160").should.equal("e196160"); // MISS
+            present(cache.get("d", k => k + "494161")).should.equal("d494161"); // MISS
+            present(cache.get("e", k => k + "196160")).should.equal("e196160"); // MISS
         });
     });
     describe("#load", function () {
         this.timeout(10);
         it("should load new values from loader", function () {
-            cache.get("h").should.equal("hl548994616"); // MISS
-            cache.get("i").should.equal("il548994616"); // MISS
+            present(cache.get("h")).should.equal("hl548994616"); // MISS
+            present(cache.get("i")).should.equal("il548994616"); // MISS
         });
     });
     describe("#keys", function () {

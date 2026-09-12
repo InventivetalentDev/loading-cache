@@ -1,5 +1,12 @@
-import { AsyncLoader, AsyncMappingFunction, AsyncMultiLoader, MappingFunction } from "../loaders";
-import { Options } from "./CacheBase";
+import {
+    AsyncLoader,
+    AsyncMappingFunction,
+    AsyncMultiLoader,
+    AsyncMultiMappingFunction,
+    MappingFunction,
+    MultiMappingFunction
+} from "../loaders";
+import { Options, ResolvedOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { IAsyncCache } from "../interfaces/IAsyncCache";
 import { CacheStats } from "../CacheStats";
@@ -11,17 +18,17 @@ import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 
 export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache<K, V>, ICacheEventEmitter {
 
-    private readonly _cache: SimpleCache<K, CompletablePromise<V>>;
+    private readonly _cache: SimpleCache<K, CompletablePromise<V | undefined>>;
 
-    readonly loader: AsyncLoader<K, V>;
-    readonly multiLoader: AsyncMultiLoader<K, V>;
+    readonly loader: AsyncLoader<K, V> | undefined;
+    readonly multiLoader: AsyncMultiLoader<K, V> | undefined;
 
-    constructor(options: Options, loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, internalCache?: (options: Options) => SimpleCache<K, CompletablePromise<V>>) {
+    constructor(options: Options, loader?: AsyncLoader<K, V>, multiLoader?: AsyncMultiLoader<K, V>, internalCache?: (options: Options) => SimpleCache<K, CompletablePromise<V | undefined>>) {
         super({});
         if (typeof internalCache !== "undefined") {
             this._cache = internalCache(options);
         } else {
-            this._cache = new SimpleCache<K, CompletablePromise<V>>(options);
+            this._cache = new SimpleCache<K, CompletablePromise<V | undefined>>(options);
         }
 
         this.loader = loader;
@@ -30,11 +37,11 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         CacheEvents.forward(this._cache, this);
     }
 
-    get options(): Options {
+    get options(): ResolvedOptions {
         return this.cache.options;
     }
 
-    get cache(): SimpleCache<K, CompletablePromise<V>> {
+    get cache(): SimpleCache<K, CompletablePromise<V | undefined>> {
         return this._cache;
     }
 
@@ -48,33 +55,33 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         return this.cache.getIfPresent(key)?.promise;
     }
 
-    get(key: K): Promise<V>;
-    get(key: K, mappingFunction?: MappingFunction<K, V>): Promise<V>;
-    get(key: K, mappingFunction?: AsyncMappingFunction<K, V>): Promise<V>;
-    get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V> {
+    get(key: K): Promise<V | undefined>;
+    get(key: K, mappingFunction?: MappingFunction<K, V>): Promise<V | undefined>;
+    get(key: K, mappingFunction?: AsyncMappingFunction<K, V>): Promise<V | undefined>;
+    get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V | undefined> {
         return this._get(key, mappingFunction, forceLoad);
     }
 
     /**
      * @internal
      */
-    _get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V> {
+    _get(key: K, mappingFunction?: MappingFunction<K, V> | AsyncMappingFunction<K, V>, forceLoad: boolean = false): Promise<V | undefined> {
         if (!forceLoad) {
             const present = this.getIfPresent(key);
             // typeof check so a cached promise of a falsy value doesn't trigger a reload
             if (typeof present !== "undefined") {
-                return present as Promise<V>;
+                return present;
             }
         }
         if (mappingFunction) {
-            const mapped: V | Promise<V> = mappingFunction(key);
-            let mappedPromise: Promise<V>;
+            const mapped: V | Promise<V | undefined> | undefined = mappingFunction(key);
+            let mappedPromise: Promise<V | undefined>;
             if (mapped instanceof Promise) {
-                mappedPromise = mapped as Promise<V>;
+                mappedPromise = mapped;
             } else {
                 mappedPromise = Promise.resolve(mapped);
             }
-            const completable = CompletablePromise.of<V>(mappedPromise);
+            const completable = CompletablePromise.of<V | undefined>(mappedPromise);
             this.cache.put(key, completable);
             this.trackLoad(key, completable, mappedPromise);
             return mappedPromise;
@@ -82,14 +89,15 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         if (this.loader) {
             return this._get(key, this.loader, true);
         }
-        return undefined;
+        // Nothing can produce a value - still a promise, so callers can always chain
+        return Promise.resolve(undefined);
     }
 
     /**
      * Record load stats once the load settles and evict entries that failed to load,
      * so a transient error doesn't poison the key for the lifetime of the cache.
      */
-    private trackLoad(key: K, completable: CompletablePromise<V>, promise: Promise<V>): void {
+    private trackLoad(key: K, completable: CompletablePromise<V | undefined>, promise: Promise<V | undefined>): void {
         // The cached promise is only awaited if somebody asks for the key again, so mark it
         // handled here - an unhandled rejection would otherwise take the whole process down
         completable.ignoreRejection();
@@ -117,7 +125,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
      * Invalidate the key only if it still maps to the given promise, so a concurrent
      * put/refresh isn't thrown away by a load that failed afterwards.
      */
-    private invalidateIfSame(key: K, completable: CompletablePromise<V>): void {
+    private invalidateIfSame(key: K, completable: CompletablePromise<V | undefined>): void {
         if (this.cache.peek(key) === completable) {
             this.cache.invalidate(key);
         }
@@ -142,16 +150,16 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
     }
 
     getAll(keys: Iterable<K>): Promise<Map<K, V>>;
-    getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
-    getAll(keys: Iterable<K>, mappingFunction?: AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>>;
-    getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
+    getAll(keys: Iterable<K>, mappingFunction?: MultiMappingFunction<K, V>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction?: AsyncMultiMappingFunction<K, V>): Promise<Map<K, V>>;
+    getAll(keys: Iterable<K>, mappingFunction?: MultiMappingFunction<K, V> | AsyncMultiMappingFunction<K, V>): Promise<Map<K, V>> {
         return this._getAll(keys, mappingFunction);
     }
 
     /**
      * @internal
      */
-    _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>> | AsyncMappingFunction<Iterable<K>, Map<K, V>>): Promise<Map<K, V>> {
+    _getAll(keys: Iterable<K>, mappingFunction?: MultiMappingFunction<K, V> | AsyncMultiMappingFunction<K, V>): Promise<Map<K, V>> {
         const keyArray = asArray<K>(keys);
         const present = this.cache.getAllPresent(keys);
         if (mappingFunction) {
@@ -160,24 +168,25 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
             if (missingKeys.length > 0) {
                 // Only ask the loader for what isn't cached yet - passing every requested
                 // key would re-load entries the cache already holds
-                const mapped: Map<K, V> | Promise<Map<K, V>> = mappingFunction(missingKeys);
-                let mappedPromise: Promise<Map<K, V>>;
+                const mapped: Map<K, V> | Promise<Map<K, V> | undefined> | undefined = mappingFunction(missingKeys);
+                let mappedPromise: Promise<Map<K, V> | undefined>;
                 if (mapped instanceof Promise) {
-                    mappedPromise = mapped as Promise<Map<K, V>>;
+                    mappedPromise = mapped;
                 } else {
                     mappedPromise = Promise.resolve(mapped);
                 }
 
                 // populate cache with pending promises to mark them as loading
-                const pending = new Map<K, CompletablePromise<V>>();
+                const pending = new Map<K, CompletablePromise<V | undefined>>();
                 for (let key of missingKeys) {
-                    const completable = new CompletablePromise<V>();
+                    const completable = new CompletablePromise<V | undefined>();
                     completable.ignoreRejection();
                     pending.set(key, completable);
                     this.cache.put(key, completable);
                 }
 
-                const loaded = mappedPromise.then(newMap => {
+                const loaded = mappedPromise.then(mappedMap => {
+                    const newMap = mappedMap ?? new Map<K, V>();
                     let loadedCount = 0;
                     pending.forEach((completable, key) => {
                         const value = newMap.get(key);
@@ -228,7 +237,7 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         if (this.loader) {
             for (let key of keys) {
                 if (!present.has(key)) {
-                    present.set(key, CompletablePromise.of(this.get(key)).ignoreRejection());
+                    present.set(key, CompletablePromise.of<V | undefined>(this.get(key)).ignoreRejection());
                 }
             }
         }
@@ -243,15 +252,15 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
         if (value instanceof Promise) {
             // An explicitly stored promise is kept even if it rejects, but its rejection
             // must not surface as an unhandled one
-            this.cache.put(key, CompletablePromise.of(value as Promise<V>).ignoreRejection());
+            this.cache.put(key, CompletablePromise.of<V | undefined>(value as Promise<V>).ignoreRejection());
         } else {
-            this.cache.put(key, CompletablePromise.completedPromise(value as V));
+            this.cache.put(key, CompletablePromise.completedPromise<V | undefined>(value as V));
         }
     }
 
     putAll(map: Map<K, V>): void {
         map.forEach((v, k) => {
-            this.cache.put(k, CompletablePromise.completedPromise(v));
+            this.cache.put(k, CompletablePromise.completedPromise<V | undefined>(v));
         })
     }
 
@@ -264,11 +273,15 @@ export class AsyncLoadingCache<K, V> extends EventEmitter implements IAsyncCache
     invalidateAll(): void;
     invalidateAll(keys: Iterable<K>): void;
     invalidateAll(keys?: Iterable<K>): void {
-        this.cache.invalidateAll(keys);
+        if (keys) {
+            this.cache.invalidateAll(keys);
+        } else {
+            this.cache.invalidateAll();
+        }
     }
 
-    refresh(key: K): Promise<V> {
-        return this._get(key, null, true);
+    refresh(key: K): Promise<V | undefined> {
+        return this._get(key, undefined, true);
     }
 
     /////

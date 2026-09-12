@@ -1,4 +1,4 @@
-import { MappingFunction } from "../loaders";
+import { MappingFunction, MultiMappingFunction } from "../loaders";
 import { ICacheBase } from "./ICacheBase";
 
 export interface ICache<K, V> extends ICacheBase<K, V> {
@@ -30,7 +30,7 @@ export interface ICache<K, V> extends ICacheBase<K, V> {
      * @param mappingFunction function to get values for keys which do not exist
      * @return map of key -> value
      */
-    getAll(keys: Iterable<K>, mappingFunction: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V>;
+    getAll(keys: Iterable<K>, mappingFunction: MultiMappingFunction<K, V>): Map<K, V>;
 
     /**
      * Add a key->value pair to the cache, replacing any previous value mapped by the key
@@ -47,6 +47,7 @@ export interface ICache<K, V> extends ICacheBase<K, V> {
 
     /**
      * Force-refresh a key's value
+     * @return the reloaded value, or <code>undefined</code> if nothing could be loaded
      */
-    refresh(key: K): V;
+    refresh(key: K): V | undefined;
 }

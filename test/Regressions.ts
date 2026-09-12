@@ -10,6 +10,14 @@ should();
 
 const expect = chai.expect;
 
+/**
+ * Asserts the value is there and narrows it, so strict-mode tests can keep chaining
+ */
+function present<T>(value: T | undefined): T {
+    expect(value, "expected a value to be present").to.not.be.undefined;
+    return value as T;
+}
+
 describe("regressions", function () {
 
     describe("falsy values", function () {
@@ -145,7 +153,7 @@ describe("regressions", function () {
                 }
             );
             const all = cache2.getAll(["a"]);
-            const handedOut = cache2.getIfPresent("a");
+            const handedOut = present(cache2.getIfPresent("a"));
             await all.should.be.rejected;
             await handedOut.should.be.rejectedWith("multi loader failed");
             cache2.end();
@@ -174,7 +182,7 @@ describe("regressions", function () {
                 async () => new Map([["a", "va"]])
             );
             const result = await cache.getAll(["a", "b"]);
-            result.get("a").should.equal("va");
+            present(result.get("a")).should.equal("va");
             cache.has("a").should.be.true;
             cache.has("b").should.be.false;
             cache.stats.get(CacheStats.LOAD_FAIL).should.equal(1);
@@ -187,7 +195,7 @@ describe("regressions", function () {
             const store = new Map<string, string>();
             const cache = new WrappedCache<string, string>(
                 { expirationInterval: 0, ...options },
-                k => store.has(k) ? store.get(k) : null,
+                k => store.get(k) ?? null,
                 (k, v) => void store.set(k, v),
                 k => store.delete(k),
                 () => store.clear()
@@ -237,7 +245,7 @@ describe("regressions", function () {
         it("should report persisted entries from has() after a restart", function () {
             const store = new Map<string, string>();
             const make = () => new WrappedCache<string, string>({ expirationInterval: 0 },
-                k => store.has(k) ? store.get(k) : null,
+                k => store.get(k) ?? null,
                 (k, v) => void store.set(k, v),
                 k => store.delete(k),
                 () => store.clear());
@@ -257,7 +265,7 @@ describe("regressions", function () {
             const store = new Map<string, string>();
             const make = () => new WrappedCache<string, string>(
                 { expirationInterval: 0, expireAfterWrite: Time.millis(30) },
-                k => store.has(k) ? store.get(k) : null,
+                k => store.get(k) ?? null,
                 (k, v) => void store.set(k, v),
                 k => store.delete(k),
                 () => store.clear());
@@ -277,6 +285,59 @@ describe("regressions", function () {
             const { store, cache } = wrapped();
             store.set(JSON.stringify("bad"), "{not json");
             expect(cache.getIfPresent("bad")).to.be.undefined;
+            cache.end();
+        });
+    });
+
+    describe("strict typing", function () {
+        it("should return a promise even when nothing can load the key", async function () {
+            // no loader and no mapping function - a bare undefined return would make
+            // cache.get(key).then(...) throw
+            const cache = Caches.builder().buildAsync<string, string>();
+            const result = cache.get("nope");
+            expect(result).to.be.a("Promise");
+            expect(await result).to.be.undefined;
+            cache.end();
+        });
+
+        it("should not blow up when a sync mapping function returns nothing", function () {
+            const cache = Caches.builder().build<string, string>();
+            const result = cache.getAll(["a", "b"], () => undefined);
+            result.should.be.a("Map");
+            result.size.should.equal(0);
+            cache.keys().should.be.empty;
+            cache.stats.get(CacheStats.LOAD_FAIL).should.equal(2);
+            cache.end();
+        });
+
+        it("should not blow up when an async mapping function returns nothing", async function () {
+            const cache = Caches.builder().buildAsync<string, string>();
+            const result = await cache.getAll(["a", "b"], async () => undefined);
+            result.size.should.equal(0);
+            cache.keys().should.be.empty;
+            cache.stats.get(CacheStats.LOAD_FAIL).should.equal(2);
+            cache.end();
+        });
+
+        it("should expose loaders as possibly absent", function () {
+            const withLoader = Caches.builder().build<string, string>(k => k);
+            const withoutLoader = Caches.builder().build<string, string>();
+            expect(withLoader.loader).to.be.a("function");
+            expect((withoutLoader as any).loader).to.be.undefined;
+            withLoader.end();
+            withoutLoader.end();
+        });
+
+        it("should fill in every option, ignoring explicit undefined", function () {
+            const cache = new SimpleCache<string, string>({
+                expireAfterWrite: undefined,
+                recordStats: false
+            });
+            // an explicit undefined must not wipe out the default
+            cache.options.expireAfterWrite.should.equal(0);
+            cache.options.expirationInterval.should.equal(Time.minutes(5));
+            cache.options.deleteOnExpiration.should.be.true;
+            cache.options.recordStats.should.be.false;
             cache.end();
         });
     });
