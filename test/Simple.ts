@@ -10,8 +10,18 @@ import { Time } from "@inventivetalent/time";
 chai.use(chaiAsPromised);
 should();
 
+/**
+ * Asserts the value is there and narrows it, so strict-mode tests can keep chaining
+ */
+function present<T>(value: T | undefined): T {
+    chai.expect(value, "expected a value to be present").to.not.be.undefined;
+    return value as T;
+}
+
 describe("SimpleCache<string, string>", function () {
     let cache: SimpleCache<string, string>;
+    const expiredKeys: string[] = [];
+    let allExpired: Promise<void>;
     describe("#init", function () {
         it("should create a new cache with options", function () {
             cache = Caches.builder()
@@ -31,6 +41,16 @@ describe("SimpleCache<string, string>", function () {
                 console.log("[stat] " + stat + " " + amount);
             });
         });
+        it("should register the 'expire' listener before anything can expire", function () {
+            allExpired = new Promise<void>(resolve => {
+                cache.on("expire", function (k, v) {
+                    expiredKeys.push(k);
+                    if (expiredKeys.length >= 6) {
+                        resolve();
+                    }
+                });
+            });
+        });
     });
     describe("#put", function () {
         it("should put new entries", function () {
@@ -42,18 +62,18 @@ describe("SimpleCache<string, string>", function () {
     });
     describe("#get", function () {
         it("should get existing entries", function () {
-            cache.getIfPresent("a").should.equal("12345"); // HIT
-            cache.getIfPresent("x").should.equal("1346"); // HIT
+            present(cache.getIfPresent("a")).should.equal("12345"); // HIT
+            present(cache.getIfPresent("x")).should.equal("1346"); // HIT
 
             let map = cache.getAllPresent(["b", "y"]); // 2xHIT
             map.should.be.a("Map");
             map.size.should.equal(2);
-            map.get("b").should.equal("5134676");
-            map.get("y").should.equal("167867");
+            present(map.get("b")).should.equal("5134676");
+            present(map.get("y")).should.equal("167867");
         });
         it("should get new values using mapping function", function () {
-            cache.get("d", k => k + "218979").should.equal("d218979"); // MISS
-            cache.get("e", k => k + "168797").should.equal("e168797"); // MISS
+            present(cache.get("d", k => k + "218979")).should.equal("d218979"); // MISS
+            present(cache.get("e", k => k + "168797")).should.equal("e168797"); // MISS
         });
     });
     describe("#keys", function () {
@@ -62,22 +82,16 @@ describe("SimpleCache<string, string>", function () {
         });
     });
     describe("#expiration", function () {
-        this.timeout(3500);
-        it("should emit 'expire' event on expiration", function (done) {
-            let c = 0;
-            cache.on("expire", function (k, v) {
-                c++;
+        this.timeout(5000);
+        // Waiting for the events rather than asserting at a fixed deadline - the assertion
+        // would otherwise race the cache's own cleanup interval
+        it("should emit 'expire' event on expiration", function () {
+            return allExpired.then(() => {
+                expiredKeys.should.have.members(["a", "b", "x", "y", "d", "e"]);
             });
-            setTimeout(function () {
-                c.should.equal(6);
-                done();
-            }, 1500);
         });
-        it("should expire entries after 1 second", function (done) {
-            setTimeout(function () {
-                cache.keys().length.should.equal(0);
-                done();
-            }, 1500);
+        it("should expire entries after 1 second", function () {
+            cache.keys().length.should.equal(0);
         });
     });
     describe("#stats", function () {

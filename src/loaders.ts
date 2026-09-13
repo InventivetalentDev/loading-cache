@@ -10,7 +10,15 @@ export interface MappingFunction<K, V> {
 export interface Loader<K, V> extends MappingFunction<K, V> {
 }
 
-export interface MultiLoader<K, V> {
+/**
+ * Function to retrieve values for several keys at once.<br/>
+ * Receives only the keys that are not cached yet.
+ */
+export interface MultiMappingFunction<K, V> {
+    (keys: K[]): Map<K, V> | undefined;
+}
+
+export interface MultiLoader<K, V> extends MultiMappingFunction<K, V> {
     (keys: K[]): Map<K, V>;
 }
 
@@ -27,6 +35,14 @@ export interface AsyncLoader<K, V> {
     (key: K): Promise<V | undefined>;
 }
 
-export interface AsyncMultiLoader<K, V> {
+/**
+ * Function to retrieve values for several keys at once.<br/>
+ * Receives only the keys that are not cached yet.
+ */
+export interface AsyncMultiMappingFunction<K, V> {
+    (keys: K[]): Promise<Map<K, V> | undefined>;
+}
+
+export interface AsyncMultiLoader<K, V> extends AsyncMultiMappingFunction<K, V> {
     (keys: K[]): Promise<Map<K, V>>;
 }

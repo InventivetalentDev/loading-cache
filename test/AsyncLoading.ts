@@ -7,8 +7,18 @@ import { Time } from "@inventivetalent/time";
 chai.use(chaiAsPromised);
 should();
 
+/**
+ * Asserts the value is there and narrows it, so strict-mode tests can keep chaining
+ */
+function present<T>(value: T | undefined): T {
+    chai.expect(value, "expected a value to be present").to.not.be.undefined;
+    return value as T;
+}
+
 describe("AsyncLoadingCache<string, string>", function () {
     let cache: AsyncLoadingCache<string, string>;
+    const expiredKeys: string[] = [];
+    let allExpired: Promise<void>;
     describe("#init", function () {
         this.timeout(5);
         it("should create a new cache with options", function () {
@@ -37,6 +47,16 @@ describe("AsyncLoadingCache<string, string>", function () {
                 console.log('[expire]', k, v);
             });
         });
+        it("should register the 'expire' listener before anything can expire", function () {
+            allExpired = new Promise<void>(resolve => {
+                cache.on("expire", function (k, v) {
+                    expiredKeys.push(k);
+                    if (expiredKeys.length >= 13) {
+                        resolve();
+                    }
+                });
+            });
+        });
     });
     describe("#put", function () {
         this.timeout(5);
@@ -52,7 +72,7 @@ describe("AsyncLoadingCache<string, string>", function () {
     describe("#get-present", function () {
         this.timeout(10);
         it("should get existing entries quickly  #1", function () {
-            let a = cache.getIfPresent("a"); // HIT
+            let a = present(cache.getIfPresent("a")); // HIT
             a.should.be.a("Promise");
             return Promise.all([
                 a.should.be.fulfilled,
@@ -60,7 +80,7 @@ describe("AsyncLoadingCache<string, string>", function () {
             ])
         });
         it("should get existing entries quickly #2", function () {
-            let x = cache.getIfPresent("x"); // HIT
+            let x = present(cache.getIfPresent("x")); // HIT
             x.should.be.a("Promise");
             return Promise.all([
                 x.should.be.fulfilled,
@@ -75,8 +95,8 @@ describe("AsyncLoadingCache<string, string>", function () {
                 mapPromise.then(map => {
                     map.should.be.a("Map");
                     map.size.should.equal(2);
-                    map.get("b").should.equal("5616148");
-                    map.get("y").should.equal("1619849");
+                    present(map.get("b")).should.equal("5616148");
+                    present(map.get("y")).should.equal("1619849");
                 })
             ])
         });
@@ -173,7 +193,7 @@ describe("AsyncLoadingCache<string, string>", function () {
         it("should not load again after calling getAll #1", function () {
             this.timeout(10)
             console.log('getIfPresent')
-            let b = cache.getIfPresent("o"); // HIT
+            let b = present(cache.getIfPresent("o")); // HIT
             console.log(b)
             b.should.be.a("Promise");
             return Promise.all([
@@ -214,23 +234,16 @@ describe("AsyncLoadingCache<string, string>", function () {
         });
     });
     describe("#expiration", function () {
-        this.timeout(7000);
-        it("should emit 'expire' event on expiration", function (done) {
-            let c = 0;
-            cache.on("expire", function (k, v) {
-                c++;
+        this.timeout(12000);
+        // Waiting for the events rather than asserting at a fixed deadline - the assertion
+        // would otherwise race the cache's own cleanup interval
+        it("should emit 'expire' event on expiration", function () {
+            return allExpired.then(() => {
+                expiredKeys.should.have.members(["a", "b", "x", "y", "d", "e", "k", "l", "h", "i", "o", "p", "q"]);
             });
-            setTimeout(function () {
-                console.log('expired', c);
-                c.should.equal(13);
-                done();
-            }, 6000);
         });
-        it("should expire entries after 5 seconds", function (done) {
-            setTimeout(function () {
-                cache.keys().length.should.equal(0);
-                done();
-            }, 500);
+        it("should expire entries after 5 seconds", function () {
+            cache.keys().length.should.equal(0);
         });
     });
     describe("#stats", function () {

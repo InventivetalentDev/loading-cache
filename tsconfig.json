@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "noImplicitAny": true,
+    "strict": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
     "esModuleInterop": true,
     "module": "ES2020",
     "target": "ES2020",

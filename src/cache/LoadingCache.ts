@@ -1,5 +1,5 @@
-import { Loader, MappingFunction, MultiLoader } from "../loaders";
-import { Options } from "./CacheBase";
+import { Loader, MappingFunction, MultiLoader, MultiMappingFunction } from "../loaders";
+import { Options, ResolvedOptions } from "./CacheBase";
 import { SimpleCache } from "./SimpleCache";
 import { ICache, ICacheEventEmitter } from "../interfaces";
 import { CacheStats } from "../CacheStats";
@@ -10,8 +10,8 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
 
     private readonly _cache: SimpleCache<K, V>;
 
-    readonly loader: Loader<K, V>;
-    readonly multiLoader: MultiLoader<K, V>;
+    readonly loader: Loader<K, V> | undefined;
+    readonly multiLoader: MultiLoader<K, V> | undefined;
 
     constructor(options: Options, loader?: Loader<K, V>, multiLoader?: MultiLoader<K, V>, internalCache?: (options: Options) => SimpleCache<K, V>) {
         super({});
@@ -31,7 +31,7 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
         return this._cache;
     }
 
-    get options(): Options {
+    get options(): ResolvedOptions {
         return this.cache.options;
     }
 
@@ -57,7 +57,8 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
     _get(key: K, mappingFunction?: MappingFunction<K, V>, forceLoad: boolean = false): V | undefined {
         if (!forceLoad) {
             const present = this.getIfPresent(key);
-            if (present) {
+            // typeof check so cached falsy values like 0, "" or false don't trigger a reload
+            if (typeof present !== "undefined") {
                 return present;
             }
         }
@@ -77,15 +78,15 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
     }
 
     getAll(keys: Iterable<K>): Map<K, V>;
-    getAll(keys: Iterable<K>, mappingFunction: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V>;
-    getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V> {
+    getAll(keys: Iterable<K>, mappingFunction: MultiMappingFunction<K, V>): Map<K, V>;
+    getAll(keys: Iterable<K>, mappingFunction?: MultiMappingFunction<K, V>): Map<K, V> {
         return this._getAll(keys, mappingFunction);
     }
 
     /**
      * @internal
      */
-    _getAll(keys: Iterable<K>, mappingFunction?: MappingFunction<Iterable<K>, Map<K, V>>): Map<K, V> {
+    _getAll(keys: Iterable<K>, mappingFunction?: MultiMappingFunction<K, V>): Map<K, V> {
         if (mappingFunction) {
             return this.cache.getAll(keys, mappingFunction);
         }
@@ -96,7 +97,11 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
         if (this.loader) {
             for (let key of keys) {
                 if (!present.has(key)) {
-                    present.set(key, this.get(key, this.loader));
+                    const loaded = this.get(key, this.loader);
+                    // Undefined values are not returned, matching getAllPresent
+                    if (typeof loaded !== "undefined") {
+                        present.set(key, loaded);
+                    }
                 }
             }
         }
@@ -122,11 +127,15 @@ export class LoadingCache<K, V> extends EventEmitter implements ICache<K, V>, IC
     invalidateAll(): void;
     invalidateAll(keys: Iterable<K>): void;
     invalidateAll(keys?: Iterable<K>): void {
-        this.cache.invalidateAll(keys);
+        if (keys) {
+            this.cache.invalidateAll(keys);
+        } else {
+            this.cache.invalidateAll();
+        }
     }
 
-    refresh(key: K): V {
-        return this._get(key, null, true);
+    refresh(key: K): V | undefined {
+        return this._get(key, undefined, true);
     }
 
     /////

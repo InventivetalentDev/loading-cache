@@ -5,7 +5,12 @@ import { asArray } from "../util";
 import { ICacheEventEmitter } from "../interfaces/ICacheEventEmitter";
 import { Time } from "@inventivetalent/time";
 
-const DEFAULT_OPTIONS: Options = {
+/**
+ * {@link Options} after the defaults have been applied - every field is set
+ */
+export type ResolvedOptions = Required<Options>;
+
+const DEFAULT_OPTIONS: ResolvedOptions = {
     expireAfterAccess: 0,
     expireAfterWrite: 0,
     deleteOnExpiration: true,
@@ -50,18 +55,32 @@ export interface Options {
 }
 
 /**
+ * Apply the defaults. Fields explicitly set to <code>undefined</code> fall back to the
+ * default rather than unsetting it.
+ */
+function resolveOptions(options: Options = {}): ResolvedOptions {
+    return {
+        expireAfterAccess: options.expireAfterAccess ?? DEFAULT_OPTIONS.expireAfterAccess,
+        expireAfterWrite: options.expireAfterWrite ?? DEFAULT_OPTIONS.expireAfterWrite,
+        deleteOnExpiration: options.deleteOnExpiration ?? DEFAULT_OPTIONS.deleteOnExpiration,
+        expirationInterval: options.expirationInterval ?? DEFAULT_OPTIONS.expirationInterval,
+        recordStats: options.recordStats ?? DEFAULT_OPTIONS.recordStats
+    };
+}
+
+/**
  * Base class for all cache implementations
  */
 export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEventEmitter {
 
     private readonly data: Map<K, Entry<K, V>> = new Map<K, Entry<K, V>>();
     private readonly _stats: CacheStats = new CacheStats();
-    private readonly _options: Options;
-    private _cleanupTimeout: NodeJS.Timeout;
+    private readonly _options: ResolvedOptions;
+    private _cleanupTimeout: ReturnType<typeof setTimeout> | undefined;
 
     protected constructor(options?: Options) {
         super({});
-        this._options = { ...DEFAULT_OPTIONS, ...options };
+        this._options = resolveOptions(options);
 
         // Start cleanup task if enabled
         this.runCleanup();
@@ -69,7 +88,7 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
         CacheEvents.forward(this._stats, this);
     }
 
-    get options(): Options {
+    get options(): ResolvedOptions {
         return this._options;
     }
 
@@ -82,27 +101,37 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
             this.deleteExpiredEntries();
             if (this.options.expirationInterval > 0) {
                 this._cleanupTimeout = setTimeout(() => this.runCleanup(), this.options.expirationInterval);
+                // Don't keep the process alive just for the cleanup timer
+                if (typeof (this._cleanupTimeout as any)?.unref === "function") {
+                    (this._cleanupTimeout as any).unref();
+                }
             }
         }
     }
 
     protected stopCleanupTimer() {
-        clearTimeout(this._cleanupTimeout);
+        if (typeof this._cleanupTimeout !== "undefined") {
+            clearTimeout(this._cleanupTimeout);
+            this._cleanupTimeout = undefined;
+        }
     }
 
     protected deleteExpiredEntries(recordStats: boolean = this.options.recordStats): void {
-        const toDelete: K[] = [];
+        const toDelete: Entry<K, V>[] = [];
         this.data.forEach(entry => {
             if (entry.isExpired(this.options)) {
-                toDelete.push(entry.getKey());
-                try {
-                    this.emit(CacheEvents.EXPIRE, entry.getKey(), entry.getValue());
-                } catch (e) {
-                    console.error(e);
-                }
+                toDelete.push(entry);
             }
         });
-        toDelete.forEach(k => this.data.delete(k));
+        toDelete.forEach(entry => {
+            // Route through invalidateEntry so subclasses can clean up backing stores
+            this.invalidateEntry(entry.peekKey());
+            try {
+                this.emit(CacheEvents.EXPIRE, entry.peekKey(), entry.peekValue());
+            } catch (e) {
+                console.error(e);
+            }
+        });
         if (recordStats) {
             this.stats.inc(CacheStats.EXPIRE, toDelete.length);
         }
@@ -160,12 +189,31 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
 
     /////
 
-    keys(): Array<K> {
+    /**
+     * Every stored key, including entries that have expired but not been swept yet.<br/>
+     * For internal bookkeeping - {@link keys} is the public, expiration-aware view.
+     */
+    protected allKeys(): Array<K> {
         return asArray(this.data.keys());
     }
 
+    keys(): Array<K> {
+        const keys: Array<K> = [];
+        this.data.forEach((entry, key) => {
+            // Expired entries are not retrievable, so they must not be listed either -
+            // they can linger here until the cleanup sweep (or forever, with
+            // deleteOnExpiration disabled)
+            if (!entry.isExpired(this.options)) {
+                keys.push(key);
+            }
+        });
+        return keys;
+    }
+
     has(key: K): boolean {
-        return this.data.has(key);
+        const entry = this.data.get(key);
+        // Checked against expiration so has() can never disagree with getIfPresent()
+        return typeof entry !== "undefined" && !entry.isExpired(this.options);
     }
 
     end(): void {
@@ -177,13 +225,16 @@ export abstract class CacheBase<K, V> extends EventEmitter implements ICacheEven
 
 export class Entry<K, V> {
     protected readonly key: K;
-    protected value: V;
+    // Always assigned right after construction, through setValue or fromJson
+    protected value!: V;
 
     protected accessTime: number;
     protected writeTime: number;
 
     constructor(key: K) {
         this.key = key;
+        this.accessTime = Time.now;
+        this.writeTime = Time.now;
     }
 
     static fromJson<K, V>(key: any, value: any): Entry<K, V> {
@@ -194,8 +245,22 @@ export class Entry<K, V> {
         return entry;
     }
 
+    /**
+     * Get the key without counting it as an access
+     */
+    peekKey(): K {
+        return this.key;
+    }
+
+    /**
+     * Get the value without counting it as an access
+     */
+    peekValue(): V {
+        return this.value;
+    }
+
     getKey(): K {
-        this.accessTime = Time.now
+        this.accessTime = Time.now;
         return this.key;
     }
 
@@ -210,16 +275,15 @@ export class Entry<K, V> {
         return this.value = v;
     }
 
-    isExpired(options: Options) {
-        if (options.expireAfterAccess !== 0) {
-            if (Time.now - this.accessTime > options.expireAfterAccess) {
-                return true;
-            }
+    isExpired(options: Options): boolean {
+        // Defaulted locally so a plain Options with missing fields never expires by accident
+        const expireAfterAccess = options.expireAfterAccess ?? 0;
+        const expireAfterWrite = options.expireAfterWrite ?? 0;
+        if (expireAfterAccess > 0 && Time.now - this.accessTime > expireAfterAccess) {
+            return true;
         }
-        if (options.expireAfterWrite !== 0) {
-            if (Time.now - this.writeTime > options.expireAfterWrite) {
-                return true;
-            }
+        if (expireAfterWrite > 0 && Time.now - this.writeTime > expireAfterWrite) {
+            return true;
         }
         return false;
     }

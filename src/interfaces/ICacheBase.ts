@@ -1,8 +1,8 @@
-import { Options } from "../cache/CacheBase";
+import { ResolvedOptions } from "../cache/CacheBase";
 import { CacheStats } from "../CacheStats";
 
 export interface ICacheBase<K, V> {
-    readonly options: Options;
+    readonly options: ResolvedOptions;
     readonly stats: CacheStats;
 
     /**

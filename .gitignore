@@ -2,3 +2,12 @@ dist
 node_modules
 .idea/*
 *.iml
+
+# Yarn (nodeLinker: node-modules - only the lockfile and config are tracked)
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
